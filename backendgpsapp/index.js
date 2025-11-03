@@ -1,6 +1,4 @@
 const express = require('express')
-const https = require('https')
-const fs = require('fs')
 const cors = require('cors')
 const { Pool } = require('pg')
 const app = express()
@@ -28,22 +26,24 @@ app.get('/', (req, res) => {
 app.post('/location/:id', async (req, res) => {
   const { id } = req.params
   const { latitude, longitude } = req.body
-  
+
   if (latitude === undefined || longitude === undefined) {
     return res.status(400).json({ error: 'Latitude and longitude are required' })
   }
-  
+
   const lat = parseFloat(latitude)
   const lon = parseFloat(longitude)
-  
+
   if (Number.isNaN(lat) || Number.isNaN(lon)) {
     return res.status(400).json({ error: 'Latitude and longitude must be numbers' })
   }
-  
+
   try {
     const insertQuery = `INSERT INTO locations (device_id, latitude, longitude) VALUES ($1, $2, $3) RETURNING *;`
     const result = await pool.query(insertQuery, [id, lat, lon])
+
     console.log(`Saved location for ID ${id}:`, { latitude: lat, longitude: lon })
+
     res.json({
       message: 'Location received and stored successfully',
       data: result.rows[0]
@@ -65,23 +65,6 @@ app.get('/health', async (req, res) => {
   }
 })
 
-// Configuración HTTPS
-try {
-  const options = {
-    key: fs.readFileSync('server.key'),
-    cert: fs.readFileSync('server.cert')
-  }
-  
-  https.createServer(options, app).listen(port, '0.0.0.0', () => {
-    console.log(`HTTPS Server listening on port ${port}`)
-    console.log(`Access from your phone: https://[YOUR_IP]:${port}`)
-  })
-} catch (err) {
-  console.error('Could not start HTTPS server. Make sure server.key and server.cert exist.')
-  console.error('Generate them with: openssl req -nodes -new -x509 -keyout server.key -out server.cert')
-  console.error('Falling back to HTTP...')
-  
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`HTTP Server listening on port ${port}`)
-  })
-}
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+})
