@@ -1,5 +1,15 @@
 
 services:
+
+  frontend1:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
+    container_name: frontend1
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backendgpsapp
@@ -8,6 +18,27 @@ services:
       - "3000:3000"
     env_file:
       - ./backendgpsapp/.env
+    restart: unless-stopped
+
+  backend2:
+    build:
+      context: ./backend
+    container_name: backend2
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: example
+      PGDATABASE: postgres
+      PGPORT: 5432
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: example
+      SERVER_PORT: 3001
+    depends_on:
+      - db
     restart: unless-stopped
 
   frontend:
