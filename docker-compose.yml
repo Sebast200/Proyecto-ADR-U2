@@ -25,6 +25,27 @@ services:
       PGPORT: 5432
     restart: unless-stopped
 
+  backend2:
+    build:
+      context: ./backend
+    container_name: backend2
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: example
+      PGDATABASE: postgres
+      PGPORT: 5432
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: example
+      SERVER_PORT: 3001
+    depends_on:
+      - db
+    restart: unless-stopped
+
   frontend:
     image: nginx:stable-alpine
     container_name: gpsapp
