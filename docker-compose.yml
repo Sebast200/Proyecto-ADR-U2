@@ -6,13 +6,8 @@ services:
     container_name: backendgpsapp
     ports:
       - "3000:3000"
-    environment:
-      NODE_ENV: production
-      PGHOST: db
-      PGUSER: postgres
-      PGPASSWORD: example
-      PGDATABASE: postgres
-      PGPORT: 5432
+    env_file:
+      - ./backendgpsapp/.env
     restart: unless-stopped
 
   frontend:

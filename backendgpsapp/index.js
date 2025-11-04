@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const https = require('https')
 const fs = require('fs')
@@ -7,12 +8,40 @@ const app = express()
 const port = 3000
 
 // Configuración de conexión a Postgres (se leen variables de entorno)
-const pool = new Pool({
-  host: process.env.PGHOST || 'db',
-  user: process.env.PGUSER || 'postgres',
-  password: process.env.PGPASSWORD || 'example',
-  database: process.env.PGDATABASE || 'postgres',
-  port: process.env.PGPORT ? parseInt(process.env.PGPORT) : 5432,
+// Soporta tanto variables separadas (PGHOST, PGUSER, ...) como DATABASE_URL.
+const poolConfig = {}
+
+if (process.env.DATABASE_URL) {
+  // Usar connection string si está disponible (útil en deploys que proveen DATABASE_URL)
+  poolConfig.connectionString = process.env.DATABASE_URL
+  // Configuración SSL: por defecto habilitamos SSL si se provee DATABASE_URL.
+  // Puedes forzar la desactivación con PGSSLMODE=disable o desactivar la verificación
+  // con PG_SSL_REJECT_UNAUTHORIZED=0 (útil para certificados autofirmados en dev).
+  if (process.env.PGSSLMODE === 'disable') {
+    poolConfig.ssl = false
+  } else if (process.env.PG_SSL_REJECT_UNAUTHORIZED === '0') {
+    poolConfig.ssl = { rejectUnauthorized: false }
+  } else {
+    poolConfig.ssl = true
+  }
+} else {
+  poolConfig.host = process.env.PGHOST
+  poolConfig.user = process.env.PGUSER
+  poolConfig.password = process.env.PGPASSWORD
+  poolConfig.database = process.env.PGDATABASE
+  poolConfig.port = process.env.PGPORT
+}
+
+// Crear pool
+const pool = new Pool(poolConfig)
+
+// Mostrar configuración no sensible para debug (no imprimir password)
+console.log('Postgres config:', {
+  host: poolConfig.host || (process.env.DATABASE_URL ? '(from DATABASE_URL)' : undefined),
+  user: poolConfig.user,
+  database: poolConfig.database,
+  port: poolConfig.port,
+  usingConnectionString: !!process.env.DATABASE_URL,
 })
 
 // Middleware para procesar JSON
