@@ -1,0 +1,10 @@
+C:\Users\marco\OneDrive\Escritorio\Proyectos\ADR\backend\src\main\java\com\example\demo\controller\AuthController.java
+C:\Users\marco\OneDrive\Escritorio\Proyectos\ADR\backend\src\main\java\com\example\demo\DemoApplication.java
+C:\Users\marco\OneDrive\Escritorio\Proyectos\ADR\backend\src\main\java\com\example\demo\dto\AuthResponse.java
+C:\Users\marco\OneDrive\Escritorio\Proyectos\ADR\backend\src\main\java\com\example\demo\dto\LoginRequest.java
+C:\Users\marco\OneDrive\Escritorio\Proyectos\ADR\backend\src\main\java\com\example\demo\dto\RegisterRequest.java
+C:\Users\marco\OneDrive\Escritorio\Proyectos\ADR\backend\src\main\java\com\example\demo\entity\User.java
+C:\Users\marco\OneDrive\Escritorio\Proyectos\ADR\backend\src\main\java\com\example\demo\enums\Role.java
+C:\Users\marco\OneDrive\Escritorio\Proyectos\ADR\backend\src\main\java\com\example\demo\repo\UserRepository.java
+C:\Users\marco\OneDrive\Escritorio\Proyectos\ADR\backend\src\main\java\com\example\demo\security\SecurityConfig.java
+C:\Users\marco\OneDrive\Escritorio\Proyectos\ADR\backend\src\main\java\com\example\demo\service\AuthService.java
