@@ -1,0 +1,11 @@
+com\example\demo\dto\RegisterRequest.class
+com\example\demo\DemoApplication.class
+com\example\demo\entity\User.class
+com\example\demo\dto\LoginRequest.class
+com\example\demo\dto\AuthResponse.class
+com\example\demo\enums\Role.class
+com\example\demo\repo\UserRepository.class
+com\example\demo\controller\AuthController.class
+com\example\demo\entity\User$UserBuilder.class
+com\example\demo\security\SecurityConfig.class
+com\example\demo\service\AuthService.class

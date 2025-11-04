@@ -1,0 +1,38 @@
+Con postman probar:
+Register:
+POST http://localhost:8080/api/auth/register
+raw/json:
+Flota:
+{
+  "rut": "11111111-1",
+  "email": "encargado@flota.cl",
+  "password": "123456",
+  "firstName": "Mario",
+  "lastName": "Fuentes",
+  "role": "FLOTA"
+}
+DAF
+{
+  "rut": "22222222-2",
+  "email": "daf@empresa.cl",
+  "password": "123456",
+  "firstName": "Claudia",
+  "lastName": "Reyes",
+  "role": "DAF"
+}
+Chofer:
+{
+  "rut": "33333333-3",
+  "email": "chofer@empresa.cl",
+  "password": "123456",
+  "firstName": "Luis",
+  "lastName": "Araya",
+  "role": "CHOFER"
+}
+Login:
+POST http://localhost:8080/api/auth/login
+raw/json:
+{
+  "rutOrEmail": "flota@empresa.cl",
+  "password": "admin123"
+}
