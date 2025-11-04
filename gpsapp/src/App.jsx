@@ -1,15 +1,25 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 import api from './api/axios'
 
 function App() {
-  const [count, setCount] = useState(0)
   const [deviceId, setDeviceId] = useState('DEVICE123')
   const [status, setStatus] = useState('')
+  const [sending, setSending] = useState(false)
+  const intervalRef = useRef(null)
 
-  const sendLocation = () => {
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [])
+
+  const getAndSendLocation = () => {
     if (!navigator.geolocation) {
       setStatus('Geolocation not supported in this browser')
       return
@@ -22,6 +32,7 @@ function App() {
         const { latitude, longitude } = position.coords
         setStatus('Sending location to server...')
         try {
+          // axios baseURL is '/location', so post to `/${deviceId}` to form '/location/:deviceId'
           const res = await api.post(`/location/${encodeURIComponent(deviceId)}`, {
             latitude,
             longitude
@@ -38,6 +49,28 @@ function App() {
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )
+  }
+
+  const toggleSending = () => {
+    if (sending) {
+      // stop
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      setSending(false)
+      setStatus('Stopped sending location')
+    } else {
+      if (!deviceId) {
+        setStatus('Please set a device ID before starting')
+        return
+      }
+      // send once immediately, then every 2 seconds
+      getAndSendLocation()
+      intervalRef.current = setInterval(getAndSendLocation, 2000)
+      setSending(true)
+      setStatus('Started sending location every 2s')
+    }
   }
 
   return (
@@ -58,7 +91,9 @@ function App() {
             <input value={deviceId} onChange={(e) => setDeviceId(e.target.value)} />
           </label>
         </div>
-        <button onClick={sendLocation}>Send current GPS location</button>
+        <button onClick={toggleSending}>
+          {sending ? 'Stop sending location' : 'Start sending location every 2s'}
+        </button>
         <p style={{ marginTop: 8 }}>{status}</p>
       </div>
       <p className="read-the-docs">
