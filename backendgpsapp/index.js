@@ -23,9 +23,9 @@ app.get('/', (req, res) => {
 })
 
 // Ruta para recibir ubicación GPS y almacenarla en Postgres
-// Acepta: POST /location/:id  OR  POST /location  (con { id, latitude, longitude } en body)
-app.post('/location/:id?', async (req, res) => {
-  const urlId = req.params.id
+// Soporte para POST /location  y POST /location/:id  (body puede contener id)
+async function handleLocation(req, res) {
+  const urlId = req.params?.id
   const { id: bodyId, latitude, longitude } = req.body || {}
   const deviceId = bodyId || urlId
 
@@ -58,7 +58,10 @@ app.post('/location/:id?', async (req, res) => {
     console.error('DB error:', err)
     res.status(500).json({ error: 'Database error' })
   }
-})
+}
+
+app.post('/location', handleLocation)
+app.post('/location/:id', handleLocation)
 
 // Simple health-check to verify DB connectivity
 app.get('/health', async (req, res) => {
