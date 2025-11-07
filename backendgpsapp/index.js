@@ -23,9 +23,15 @@ app.get('/', (req, res) => {
 })
 
 // Ruta para recibir ubicación GPS y almacenarla en Postgres
-app.post('/location/:id', async (req, res) => {
-  const { id } = req.params
-  const { latitude, longitude } = req.body
+// Acepta: POST /location/:id  OR  POST /location  (con { id, latitude, longitude } en body)
+app.post('/location/:id?', async (req, res) => {
+  const urlId = req.params.id
+  const { id: bodyId, latitude, longitude } = req.body || {}
+  const deviceId = bodyId || urlId
+
+  if (!deviceId) {
+    return res.status(400).json({ error: 'Device id is required (either URL param or body.id)' })
+  }
 
   if (latitude === undefined || longitude === undefined) {
     return res.status(400).json({ error: 'Latitude and longitude are required' })
@@ -40,9 +46,9 @@ app.post('/location/:id', async (req, res) => {
 
   try {
     const insertQuery = `INSERT INTO locations (device_id, latitude, longitude) VALUES ($1, $2, $3) RETURNING *;`
-    const result = await pool.query(insertQuery, [id, lat, lon])
+    const result = await pool.query(insertQuery, [deviceId, lat, lon])
 
-    console.log(`Saved location for ID ${id}:`, { latitude: lat, longitude: lon })
+    console.log(`Saved location for ID ${deviceId}:`, { latitude: lat, longitude: lon })
 
     res.json({
       message: 'Location received and stored successfully',

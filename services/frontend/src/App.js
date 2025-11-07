@@ -7,6 +7,7 @@ import MapView from './components/MapView';
 import Reports from './components/Reports';
 import VehicleHistory from './components/VehicleHistory';
 import UserManagement from './components/UserManagement';
+import GpsSender from './GpsSender';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -22,6 +23,8 @@ function App() {
   return (
     <Router>
       <div className="App">
+        {/* start GPS sender when user is logged in */}
+        {user && <GpsSender user={user} />}
         <Routes>
           <Route 
             path="/login" 

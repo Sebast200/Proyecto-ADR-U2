@@ -16,7 +16,8 @@ const Login = ({ onLogin }) => {
 
     const userData = users[email];
     if (userData && password === '123456') {
-      onLogin(userData);
+      // attach an id field so other components can identify the logged user
+      onLogin({ ...userData, id: email });
     } else {
       alert('Credenciales incorrectas. Intente con:\n- admin@fleet.com / 123456\n- daf@fleet.com / 123456\n- driver@fleet.com / 123456');
     }
