@@ -1,12 +1,12 @@
 package com.example.demo.dto;
 
-import com.example.demo.enums.Role;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record RegisterRequest(
-        String rut,
-        String email,
-        String password,
-        String firstName,
-        String lastName,
-        Role role
+    @JsonProperty("rut") String rut,
+    @JsonProperty("email") String email,
+    @JsonProperty("password") String password,
+    @JsonProperty("firstName") String firstName,
+    @JsonProperty("lastName") String lastName,
+    @JsonProperty("role") String role  // 👈 importante: ahora es String, no enum
 ) {}
