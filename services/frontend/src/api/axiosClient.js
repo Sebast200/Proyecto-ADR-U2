@@ -11,4 +11,14 @@ const client = axios.create({
   timeout: 5000,
 });
 
+export async function getLastPosition(deviceId) {
+  try {
+    const response = await client.get(`/location/${deviceId}/latest`);
+    return response.data; // devuelve { device_id, last_location: { latitude, longitude, created_at } }
+  } catch (error) {
+    console.error('Error fetching last position:', error);
+    return null;
+  }
+}
+
 export default client;

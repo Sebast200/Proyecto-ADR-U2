@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import './MapView.css';
+import client, { getLastPosition } from '../api/axiosClient';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -11,6 +12,7 @@ L.Icon.Default.mergeOptions({
   iconUrl: require('leaflet/dist/images/marker-icon.png'),
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
+
 
 function MapController({ targetPosition, mapRef }) {
   const map = useMap();
@@ -36,9 +38,30 @@ const MapView = ({ user, onLogout }) => {
   const [targetPosition, setTargetPosition] = useState(null);
   const mapRef = useRef(null);
 
+  const fetchVehiclePosition = async (vehicleId) => {
+    const data = await getLastPosition(vehicleId);
+    if (data && data.last_location) {
+      const { latitude, longitude } = data.last_location;
+      setSelectedVehicle(prev =>
+        prev ? { ...prev, position: [latitude, longitude] } : prev
+      );
+      setTargetPosition([latitude, longitude]); // opcional: centrar el mapa
+    }
+  };
+
+  useEffect(() => {
+      if (!selectedVehicle) return;
+
+      const interval = setInterval(() => {
+        fetchVehiclePosition(selectedVehicle.id);
+      }, 5000); // cada 5 segundos
+
+      return () => clearInterval(interval);
+    }, [selectedVehicle]);
+
   const vehicles = [
     { 
-      id: 1, 
+      id: 'daf@fleet.com', 
       plate: 'ABC-123', 
       driver: 'Juan Pérez', 
       position: [-33.4489, -70.6693],
@@ -108,9 +131,9 @@ const MapView = ({ user, onLogout }) => {
               <div 
                 key={vehicle.id} 
                 className={`vehicle-item ${selectedVehicle?.id === vehicle.id ? 'selected' : ''}`}
-                onClick={() => {
+                onClick={async () => {
                   setSelectedVehicle(vehicle);
-                  setTargetPosition(vehicle.position);
+                  await fetchVehiclePosition(vehicle.id); // 🔥 obtiene la última posición real
                 }}
               >
                 <div className="vehicle-info">

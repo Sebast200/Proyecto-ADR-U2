@@ -63,6 +63,33 @@ async function handleLocation(req, res) {
 app.post('/location', handleLocation)
 app.post('/location/:id', handleLocation)
 
+app.get('/location/:id/latest', async (req, res) => {
+  const { id } = req.params
+
+  try {
+    const query = `
+      SELECT latitude, longitude, recorded_at
+      FROM locations
+      WHERE device_id = $1
+      ORDER BY recorded_at DESC
+      LIMIT 1;
+    `
+    const result = await pool.query(query, [id])
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No location found for this device_id' })
+    }
+
+    res.json({
+      device_id: id,
+      last_location: result.rows[0]
+    })
+  } catch (err) {
+    console.error('Error fetching latest location:', err)
+    res.status(500).json({ error: 'Database error' })
+  }
+})
+
 // Simple health-check to verify DB connectivity
 app.get('/health', async (req, res) => {
   try {
