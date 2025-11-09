@@ -9,7 +9,7 @@ services:
     ports:
       - "8081:80"
     depends_on:
-      - backend
+      - backend1
       - backend2
     restart: unless-stopped
 
@@ -118,6 +118,19 @@ services:
       SUPABASE_DB: postgres
     command: >
       sh -c "npm install pg && node syncer.js"
+  db_backup:
+    image: postgres:15-alpine
+    container_name: db_backup
+    depends_on:
+      - db
+    volumes:
+      - ./scripts/backup:/backup
+    environment:
+      - PGPASSWORD=example
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "echo '0 2 * * * /backup/backup-db.sh' | crontab - &&
+       crond -f -L /dev/stdout"
 
   adminer:
     image: adminer
