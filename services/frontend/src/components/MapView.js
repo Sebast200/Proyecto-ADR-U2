@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import './MapView.css';
-import client, { getLastPosition } from '../api/axiosClient';
+import client, { getLastPosition, getAllUsers } from '../api/axiosClient';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -37,6 +37,15 @@ const MapView = ({ user, onLogout }) => {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [targetPosition, setTargetPosition] = useState(null);
   const mapRef = useRef(null);
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const allUsers = await getAllUsers();
+      setUsers(allUsers);
+    };
+    fetchUsers();
+  }, []);
 
   const fetchVehiclePosition = async (vehicleId) => {
     const data = await getLastPosition(vehicleId);
@@ -45,7 +54,6 @@ const MapView = ({ user, onLogout }) => {
       setSelectedVehicle(prev =>
         prev ? { ...prev, position: [latitude, longitude] } : prev
       );
-      setTargetPosition([latitude, longitude]); // opcional: centrar el mapa
     }
   };
 
@@ -107,6 +115,14 @@ const MapView = ({ user, onLogout }) => {
 
       <div className="map-container">
         <aside className="map-sidebar">
+          <h3>Usuarios en la base de datos</h3>
+            <ul>
+              {users.map(u => (
+                <li key={u.id}>
+                  {u.firstName} {u.lastName} - {u.email} ({u.role})
+                </li>
+              ))}
+            </ul>
           <button className="menu-item" onClick={() => navigate('/dashboard')}>
             Dashboard
           </button>
@@ -133,7 +149,8 @@ const MapView = ({ user, onLogout }) => {
                 className={`vehicle-item ${selectedVehicle?.id === vehicle.id ? 'selected' : ''}`}
                 onClick={async () => {
                   setSelectedVehicle(vehicle);
-                  await fetchVehiclePosition(vehicle.id); // 🔥 obtiene la última posición real
+                  await fetchVehiclePosition(vehicle.id); 
+                  setTargetPosition(vehicle.position);
                 }}
               >
                 <div className="vehicle-info">

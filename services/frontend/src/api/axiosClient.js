@@ -21,4 +21,14 @@ export async function getLastPosition(deviceId) {
   }
 }
 
+export const getAllUsers = async () => {
+  try {
+    const response = await client.get('/users');
+    return response.data; // devuelve el JSON con todos los usuarios
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    return [];
+  }
+};
+
 export default client;

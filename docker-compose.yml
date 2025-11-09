@@ -1,3 +1,4 @@
+
 services:
 
   frontend1:
@@ -8,12 +9,6 @@ services:
     ports:
       - "8081:80"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
 
   backend:
     build:
@@ -29,15 +24,6 @@ services:
       PGDATABASE: postgres
       PGPORT: 5432
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
 
   backend2:
     build:
@@ -57,20 +43,20 @@ services:
       SPRING_DATASOURCE_PASSWORD: example
       SERVER_PORT: 3001
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/actuator/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
 
   db:
     image: postgres:15-alpine
     restart: always
+    # set shared memory limit when using docker compose
     shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
     environment:
       POSTGRES_PASSWORD: example
       POSTGRES_USER: postgres
@@ -121,16 +107,6 @@ services:
     restart: always
     ports:
       - 8080:8080
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-
 volumes:
   db-data:
   db-replica-data:

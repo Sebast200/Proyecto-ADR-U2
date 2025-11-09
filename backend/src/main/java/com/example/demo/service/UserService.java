@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.entity.User;
 import com.example.demo.repo.UserRepository;
 import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.List;
 
