@@ -1,122 +1,148 @@
 {
-  "id": null,
-  "title": "Proyecto-ADR-U2 - Docker Monitor",
-  "tags": ["docker", "prometheus", "adr-u2"],
-  "timezone": "browser",
-  "schemaVersion": 39,
-  "version": 1,
-  "refresh": "5s",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "prometheus",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "iteration": 1731079200,
+  "links": [],
+  "liveNow": false,
   "panels": [
     {
-      "type": "stat",
-      "title": "Contenedores en Ejecución",
-      "targets": [
-        {
-          "expr": "engine_daemon_containers_running_total",
-          "legendFormat": "Contenedores en ejecución"
-        }
-      ],
-      "gridPos": {"x": 0, "y": 0, "w": 8, "h": 4}
-    },
-    {
-      "type": "stat",
-      "title": "Versión del Docker Engine",
-      "targets": [
-        {
-          "expr": "engine_daemon_engine_info{instance=\"host.docker.internal:9323\"}"
-        }
-      ],
-      "gridPos": {"x": 8, "y": 0, "w": 8, "h": 4}
-    },
-    {
-      "type": "timeseries",
-      "title": "Uso de CPU por Contenedor",
-      "targets": [
-        {
-          "expr": "rate(engine_daemon_container_cpu_seconds_total[1m])",
-          "legendFormat": "{{name}}"
-        }
-      ],
-      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
-          "color": {"mode": "palette-classic"}
+          "unit": "percent"
         }
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Memoria usada por Contenedor (MB)",
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
       "targets": [
         {
-          "expr": "engine_daemon_container_memory_usage_bytes/1024/1024",
-          "legendFormat": "{{name}}"
+          "expr": "dockerstats_cpu_usage_ratio{name=~\"$container\"}",
+          "legendFormat": "{{name}}",
+          "refId": "A"
         }
       ],
-      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "title": "CPU Usage (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "unit": "megabytes",
-          "color": {"mode": "palette-classic"}
+          "unit": "percent"
         }
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Tráfico de Red por Contenedor (Bytes)",
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
       "targets": [
         {
-          "expr": "rate(engine_daemon_container_network_io_bytes_total[1m])",
-          "legendFormat": "{{name}}"
+          "expr": "dockerstats_memory_usage_ratio{name=~\"$container\"}",
+          "legendFormat": "{{name}}",
+          "refId": "A"
         }
       ],
-      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "title": "Memory Usage (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes",
-          "color": {"mode": "palette-classic"}
+          "unit": "megabytes"
         }
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Reinicios de Contenedores",
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
       "targets": [
         {
-          "expr": "rate(engine_daemon_container_restart_total[1m])",
-          "legendFormat": "{{name}}"
+          "expr": "dockerstats_memory_usage_bytes{name=~\"$container\"} / 1024 / 1024",
+          "legendFormat": "{{name}}",
+          "refId": "A"
         }
       ],
-      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8}
+      "title": "Memory Used (MB)",
+      "type": "timeseries"
     },
     {
-      "type": "table",
-      "title": "Información General de Contenedores",
+      "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "KBs"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
       "targets": [
         {
-          "expr": "engine_daemon_containers_running_total"
-        },
-        {
-          "expr": "engine_daemon_containers_paused_total"
-        },
-        {
-          "expr": "engine_daemon_containers_stopped_total"
+          "expr": "irate(dockerstats_network_received_bytes{name=~\"$container\"}[1m]) / 1024",
+          "legendFormat": "{{name}}",
+          "refId": "A"
         }
       ],
-      "gridPos": {"x": 0, "y": 20, "w": 24, "h": 8}
+      "title": "Network Received (KB/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "KBs"
+        }
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "irate(dockerstats_network_transmitted_bytes{name=~\"$container\"}[1m]) / 1024",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Network Transmitted (KB/s)",
+      "type": "timeseries"
     }
   ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["docker", "prometheus", "containers"],
   "templating": {
     "list": [
       {
-        "type": "query",
         "name": "container",
-        "label": "Contenedor",
-        "datasource": "Prometheus",
-        "query": "label_values(engine_daemon_container_cpu_seconds_total, name)",
-        "refresh": 1
+        "label": "Container",
+        "type": "query",
+        "datasource": "prometheus",
+        "query": "label_values(dockerstats_memory_usage_ratio, name)",
+        "includeAll": false,
+        "refresh": 1,
+        "multi": false,
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": ".*"
+        }
       }
     ]
-  }
+  },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Docker Containers Overview",
+  "uid": "docker-stats-overview",
+  "version": 1,
+  "weekStart": ""
 }
