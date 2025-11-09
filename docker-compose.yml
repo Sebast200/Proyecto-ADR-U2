@@ -8,6 +8,9 @@ services:
     container_name: frontend1
     ports:
       - "8081:80"
+    depends_on:
+      - backend
+      - backend2
     restart: unless-stopped
 
   backend1:

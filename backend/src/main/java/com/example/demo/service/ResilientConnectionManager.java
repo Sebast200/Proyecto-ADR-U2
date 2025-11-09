@@ -11,36 +11,35 @@ import java.util.concurrent.*;
 @Component
 public class ResilientConnectionManager {
 
-    private static final String SUPABASE_URL =
-            "jdbc:postgresql://aws-1-us-east-2.pooler.supabase.com:6543/postgres";
-    private static final String SUPABASE_USER = "postgres.jzqbadzevxvznbsxyecp";
-    private static final String SUPABASE_PASSWORD = "Zevasti201.";
+    // Configuración de la base de datos LOCAL (Docker PostgreSQL - db_replica)
+    private static final String DB_URL = "jdbc:postgresql://db_replica:5432/postgres";
+    private static final String DB_USER = "postgres";
+    private static final String DB_PASSWORD = "example";
 
     public Connection getConnection() throws SQLException {
         Properties props = new Properties();
-        props.setProperty("user", SUPABASE_USER);
-        props.setProperty("password", SUPABASE_PASSWORD);
-        props.setProperty("sslmode", "require");
-        props.setProperty("connectTimeout", "3"); // segundos
-        props.setProperty("socketTimeout", "3");
+        props.setProperty("user", DB_USER);
+        props.setProperty("password", DB_PASSWORD);
+        props.setProperty("connectTimeout", "5"); // segundos
+        props.setProperty("socketTimeout", "5");
 
-        System.out.println("➡ Intentando conexión rápida con Supabase (timeout total 4s)...");
+        System.out.println("➡ Intentando conexión con base de datos local...");
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<Connection> future = executor.submit(() -> DriverManager.getConnection(SUPABASE_URL, props));
+        Future<Connection> future = executor.submit(() -> DriverManager.getConnection(DB_URL, props));
 
         try {
-            // Espera máximo 4 segundos para toda la conexión (DNS + SSL + socket)
-            Connection conn = future.get(4, TimeUnit.SECONDS);
-            System.out.println("✅ Conexión Supabase establecida rápidamente.");
+            // Espera máximo 5 segundos para la conexión
+            Connection conn = future.get(5, TimeUnit.SECONDS);
+            System.out.println("✅ Conexión a BD local establecida correctamente.");
             return conn;
         } catch (TimeoutException e) {
             future.cancel(true);
-            System.err.println("⏱️ Conexión a Supabase excedió 4s, abortando.");
-            throw new SQLException("Timeout de conexión con Supabase (4s).");
+            System.err.println("⏱️ Conexión a BD local excedió 5s, abortando.");
+            throw new SQLException("Timeout de conexión con BD local (5s).");
         } catch (Exception e) {
-            System.err.println("❌ Error al conectar con Supabase: " + e.getMessage());
-            throw new SQLException("Error al conectar con Supabase: " + e.getMessage());
+            System.err.println("❌ Error al conectar con BD local: " + e.getMessage());
+            throw new SQLException("Error al conectar con BD local: " + e.getMessage());
         } finally {
             executor.shutdownNow();
         }

@@ -40,11 +40,11 @@ function App() {
           />
           <Route 
             path="/reports" 
-            element={user ? <Reports user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} 
+            element={user && user.role !== 'driver' ? <Reports user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} 
           />
           <Route 
             path="/history" 
-            element={user ? <VehicleHistory user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} 
+            element={user && user.role !== 'driver' ? <VehicleHistory user={user} onLogout={handleLogout} /> : <Navigate to="/dashboard" />} 
           />
           <Route 
             path="/users" 

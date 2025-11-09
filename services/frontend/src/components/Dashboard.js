@@ -1,46 +1,89 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from './Layout';
 import './Dashboard.css';
 
 const Dashboard = ({ user, onLogout }) => {
-  const vehicles = [
-    { id: 1, plate: 'ABC-123', driver: 'Juan Pérez', status: 'En movimiento', speed: 45, location: 'Ruta 5 Norte' },
-    { id: 2, plate: 'DEF-456', driver: 'María García', status: 'Detenido', speed: 0, location: 'Mina El Teniente' },
-    { id: 3, plate: 'GHI-789', driver: 'Pedro López', status: 'En movimiento', speed: 60, location: 'Carretera Antofagasta' },
-    { id: 4, plate: 'JKL-012', driver: 'Ana Martínez', status: 'En movimiento', speed: 55, location: 'Ruta 68' },
-    { id: 5, plate: 'MNO-345', driver: 'Carlos Rodríguez', status: 'Detenido', speed: 0, location: 'Base Central' }
+  const [vehicles, setVehicles] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const baseUrl = isLocal ? 'http://localhost:3001' : '';
+        
+        const url = user.role === 'driver'
+          ? `${baseUrl}/api/vehicles/with-drivers/user/${user.id}`
+          : `${baseUrl}/api/vehicles/with-drivers`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        // Transformar los datos de la API al formato esperado
+        const transformedVehicles = data
+          .filter(v => v.userId != null) // Solo vehículos con conductor asignado
+          .map(v => ({
+            id: v.id,
+            plate: v.plate,
+            driver: v.driverFirstName && v.driverLastName 
+              ? `${v.driverFirstName} ${v.driverLastName}` 
+              : v.driverEmail || 'Sin conductor',
+            driverId: v.userId,
+            status: 'En movimiento', // TODO: obtener status real
+            speed: 0, // TODO: obtener velocidad real
+            location: 'Ubicación desconocida' // TODO: obtener ubicación real
+          }));
+        
+        setVehicles(transformedVehicles);
+      } catch (error) {
+        console.error('Error al cargar vehículos:', error);
+        setVehicles([]); // Establecer array vacío en caso de error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVehicles();
+  }, [user.id, user.role]);
+
+  // Alertas hardcodeadas (TODO: traer desde API)
+  const allAlerts = [
+    { id: 1, type: 'warning', message: 'Vehículo excedió velocidad (85 km/h)', time: 'Hace 5 min' },
+    { id: 2, type: 'info', message: 'Vehículo detenido por más de 30 min', time: 'Hace 15 min' },
+    { id: 3, type: 'danger', message: 'Vehículo desconexión del sistema', time: 'Hace 1 hora' }
   ];
 
-  const alerts = [
-    { id: 1, type: 'warning', message: 'Vehículo ABC-123 excedió velocidad (85 km/h)', time: 'Hace 5 min' },
-    { id: 2, type: 'info', message: 'Vehículo DEF-456 detenido por más de 30 min', time: 'Hace 15 min' },
-    { id: 3, type: 'danger', message: 'Vehículo GHI-789 desconexión del sistema', time: 'Hace 1 hora' }
-  ];
+  const alerts = user.role === 'driver' ? allAlerts.slice(0, 1) : allAlerts;
+
+  if (loading) {
+    return (
+      <Layout user={user} onLogout={onLogout}>
+        <h2>Cargando...</h2>
+      </Layout>
+    );
+  }
 
   return (
     <Layout user={user} onLogout={onLogout}>
-      <h2>Panel de Control</h2>
+      <h2>{user.role === 'driver' ? 'Mi Panel de Control' : 'Panel de Control'}</h2>
 
       <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-icon">🚚</div>
               <div className="stat-info">
-                <h3>Total Vehículos</h3>
-                <p className="stat-number">{vehicles.length}</p>
+                <h3>{user.role === 'driver' ? 'Mi Vehículo' : 'Total Vehículos'}</h3>
+                <p className="stat-number">
+                  {user.role === 'driver' && vehicles.length > 0 
+                    ? vehicles[0].plate 
+                    : vehicles.length}
+                </p>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon">✅</div>
               <div className="stat-info">
-                <h3>En Movimiento</h3>
+                <h3>En Tránsito</h3>
                 <p className="stat-number">{vehicles.filter(v => v.status === 'En movimiento').length}</p>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">⏸️</div>
-              <div className="stat-info">
-                <h3>Detenidos</h3>
-                <p className="stat-number">{vehicles.filter(v => v.status === 'Detenido').length}</p>
               </div>
             </div>
             <div className="stat-card">
@@ -53,48 +96,58 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
 
           <div className="section">
-            <h3>Alertas Recientes</h3>
+            <h3>{user.role === 'driver' ? 'Mis Alertas Recientes' : 'Alertas Recientes'}</h3>
             <div className="alerts-list">
-              {alerts.map(alert => (
-                <div key={alert.id} className={`alert alert-${alert.type}`}>
-                  <div className="alert-content">
-                    <strong>{alert.message}</strong>
-                    <small>{alert.time}</small>
+              {alerts.length === 0 ? (
+                <p style={{ padding: '10px', color: '#888' }}>No hay alertas</p>
+              ) : (
+                alerts.map(alert => (
+                  <div key={alert.id} className={`alert alert-${alert.type}`}>
+                    <div className="alert-content">
+                      <strong>{alert.message}</strong>
+                      <small>{alert.time}</small>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
           <div className="section">
-            <h3>Estado de Vehículos</h3>
+            <h3>{user.role === 'driver' ? 'Estado de Mi Vehículo' : 'Estado de Vehículos'}</h3>
             <div className="table-responsive">
-              <table className="vehicles-table">
-                <thead>
-                  <tr>
-                    <th>Patente</th>
-                    <th>Conductor</th>
-                    <th>Estado</th>
-                    <th>Velocidad</th>
-                    <th>Ubicación</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {vehicles.map(vehicle => (
-                    <tr key={vehicle.id}>
-                      <td><strong>{vehicle.plate}</strong></td>
-                      <td>{vehicle.driver}</td>
-                      <td>
-                        <span className={`status-badge ${vehicle.status === 'En movimiento' ? 'status-active' : 'status-stopped'}`}>
-                          {vehicle.status}
-                        </span>
-                      </td>
-                      <td>{vehicle.speed} km/h</td>
-                      <td>{vehicle.location}</td>
+              {vehicles.length === 0 ? (
+                <p style={{ padding: '10px', color: '#888' }}>
+                  {user.role === 'driver' ? 'No tienes vehículo asignado' : 'No hay vehículos registrados'}
+                </p>
+              ) : (
+                <table className="vehicles-table">
+                  <thead>
+                    <tr>
+                      <th>Patente</th>
+                      {user.role !== 'driver' && <th>Conductor</th>}
+                      <th>Estado</th>
+                      <th>Velocidad</th>
+                      <th>Ubicación</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {vehicles.map(vehicle => (
+                      <tr key={vehicle.id}>
+                        <td><strong>{vehicle.plate}</strong></td>
+                        {user.role !== 'driver' && <td>{vehicle.driver}</td>}
+                        <td>
+                          <span className={`status-badge ${vehicle.status === 'En movimiento' ? 'status-active' : 'status-stopped'}`}>
+                            {vehicle.status}
+                          </span>
+                        </td>
+                        <td>{vehicle.speed} km/h</td>
+                        <td>{vehicle.location}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
     </Layout>

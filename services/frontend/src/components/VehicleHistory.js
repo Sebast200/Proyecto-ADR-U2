@@ -1,17 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from './Layout';
 import './VehicleHistory.css';
 
 const VehicleHistory = ({ user, onLogout }) => {
-  const [selectedVehicle, setSelectedVehicle] = useState('ABC-123');
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedVehicle, setSelectedVehicle] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const vehicles = [
-    { id: 1, plate: 'ABC-123', driver: 'Juan Pérez' },
-    { id: 2, plate: 'DEF-456', driver: 'María García' },
-    { id: 3, plate: 'GHI-789', driver: 'Pedro López' },
-    { id: 4, plate: 'JKL-012', driver: 'Ana Martínez' },
-    { id: 5, plate: 'MNO-345', driver: 'Carlos Rodríguez' }
-  ];
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const baseUrl = isLocal ? 'http://localhost:3001' : '';
+        
+        const response = await fetch(`${baseUrl}/api/vehicles/with-drivers`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Transformar datos de la API
+        const transformedVehicles = data.map(v => ({
+          id: v.id,
+          plate: v.plate,
+          driver: v.driverFirstName && v.driverLastName 
+            ? `${v.driverFirstName} ${v.driverLastName}` 
+            : v.driverEmail || 'Sin conductor',
+          driverId: v.userId
+        }));
+        
+        setVehicles(transformedVehicles);
+        if (transformedVehicles.length > 0) {
+          setSelectedVehicle(transformedVehicles[0].plate);
+        }
+      } catch (error) {
+        console.error('Error al cargar vehículos:', error);
+        setVehicles([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVehicles();
+  }, []);
 
   const historyData = {
     'ABC-123': [
@@ -53,6 +86,25 @@ const VehicleHistory = ({ user, onLogout }) => {
 
   const currentHistory = historyData[selectedVehicle] || [];
   const currentPattern = drivingPatterns[selectedVehicle] || {};
+
+  if (loading) {
+    return (
+      <Layout user={user} onLogout={onLogout}>
+        <h2>Cargando historial...</h2>
+      </Layout>
+    );
+  }
+
+  if (vehicles.length === 0) {
+    return (
+      <Layout user={user} onLogout={onLogout}>
+        <h2>Historial de Recorridos</h2>
+        <p style={{ padding: '20px', textAlign: 'center', color: '#888' }}>
+          No hay vehículos registrados
+        </p>
+      </Layout>
+    );
+  }
 
   return (
     <Layout user={user} onLogout={onLogout}>
