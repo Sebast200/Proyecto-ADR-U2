@@ -42,30 +42,28 @@ const MapView = ({ user, onLogout }) => {
   useEffect(() => {
     const fetchUsers = async () => {
       const allUsers = await getAllUsers();
-      setUsers(allUsers);
+
+      // Para cada usuario, obtener su última posición
+      const usersWithPos = await Promise.all(
+        allUsers.map(async (u) => {
+          const data = await getLastPosition(u.email);
+          if (data && data.last_location) {
+            const { latitude, longitude } = data.last_location;
+            return { ...u, position: [latitude, longitude] };
+          }
+          return { ...u, position: null };
+        })
+      );
+      console.log('Usuarios con posiciones:', usersWithPos);
+      setUsers(usersWithPos);
     };
+
     fetchUsers();
+
+    const interval = setInterval(fetchUsers, 5000);
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchVehiclePosition = async (vehicleId) => {
-    const data = await getLastPosition(vehicleId);
-    if (data && data.last_location) {
-      const { latitude, longitude } = data.last_location;
-      setSelectedVehicle(prev =>
-        prev ? { ...prev, position: [latitude, longitude] } : prev
-      );
-    }
-  };
-
-  useEffect(() => {
-      if (!selectedVehicle) return;
-
-      const interval = setInterval(() => {
-        fetchVehiclePosition(selectedVehicle.id);
-      }, 5000); // cada 5 segundos
-
-      return () => clearInterval(interval);
-    }, [selectedVehicle]);
 
   const vehicles = [
     { 
@@ -115,14 +113,6 @@ const MapView = ({ user, onLogout }) => {
 
       <div className="map-container">
         <aside className="map-sidebar">
-          <h3>Usuarios en la base de datos</h3>
-            <ul>
-              {users.map(u => (
-                <li key={u.id}>
-                  {u.firstName} {u.lastName} - {u.email} ({u.role})
-                </li>
-              ))}
-            </ul>
           <button className="menu-item" onClick={() => navigate('/dashboard')}>
             Dashboard
           </button>
@@ -142,26 +132,22 @@ const MapView = ({ user, onLogout }) => {
           )}
 
           <div className="vehicle-list">
-            <h3>Vehículos Activos</h3>
-            {vehicles.map(vehicle => (
-              <div 
-                key={vehicle.id} 
-                className={`vehicle-item ${selectedVehicle?.id === vehicle.id ? 'selected' : ''}`}
-                onClick={async () => {
-                  setSelectedVehicle(vehicle);
-                  await fetchVehiclePosition(vehicle.id); 
-                  setTargetPosition(vehicle.position);
-                }}
-              >
-                <div className="vehicle-info">
-                  <strong>{vehicle.plate}</strong>
-                  <small>{vehicle.driver}</small>
+            <h3>Usuarios Activos</h3>
+              {users.map(user => (
+                <div 
+                  key={user.id} 
+                  className={`vehicle-item ${selectedVehicle?.id === user.id ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSelectedVehicle(user);
+                    setTargetPosition(user.position);
+                  }}
+                >
+                  <div className="vehicle-info">
+                    <strong>{user.firstName} {user.lastName}</strong>
+                    <small>{user.role}</small>
+                  </div>
                 </div>
-                <div className={`vehicle-status ${vehicle.status === 'En movimiento' ? 'active' : 'stopped'}`}>
-                  {vehicle.speed} km/h
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
 
           <div className="poi-list">
@@ -193,57 +179,17 @@ const MapView = ({ user, onLogout }) => {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
             
-            {vehicles.map(vehicle => (
-              <React.Fragment key={vehicle.id}>
-                <Marker 
-                  position={vehicle.position}
-                  eventHandlers={{
-                      click: () => {
-                        setSelectedVehicle(vehicle);
-                        setTargetPosition(vehicle.position);
-                      }
-                    }}
+            {users.map((user, i) => (
+              user.position ? (
+                <Marker
+                  key={i}
+                  position={user.position}
                 >
-                  <Popup>
-                    <div className="popup-content">
-                      <h4>{vehicle.plate}</h4>
-                      <p><strong>Conductor:</strong> {vehicle.driver}</p>
-                      <p><strong>Velocidad:</strong> {vehicle.speed} km/h</p>
-                      <p><strong>Estado:</strong> {vehicle.status}</p>
-                    </div>
-                  </Popup>
+                  <Popup>{user.firstName} {user.lastName}</Popup>
                 </Marker>
-                {vehicle.route.length > 1 && (
-                  <Polyline 
-                    positions={vehicle.route} 
-                    color="blue" 
-                    weight={3}
-                    opacity={0.6}
-                  />
-                )}
-              </React.Fragment>
+              ) : null
             ))}
 
-            {pointsOfInterest.map(poi => (
-              <Marker 
-                key={poi.id} 
-                position={poi.position}
-                icon={L.divIcon({
-                  html: `<div style="background: red; width: 20px; height: 20px; border-radius: 50%;"></div>`,
-                  className: 'custom-marker'
-                })}
-                eventHandlers={{
-                  click: () => {
-                    setTargetPosition(poi.position);
-                  }
-                }}
-              >
-                <Popup>
-                  <h4>{poi.name}</h4>
-                  <p>Tipo: {poi.type}</p>
-                </Popup>
-              </Marker>
-            ))}
           </MapContainer>
         </div>
       </div>

@@ -14,6 +14,7 @@ const client = axios.create({
 export async function getLastPosition(deviceId) {
   try {
     const response = await client.get(`/location/${deviceId}/latest`);
+    console.log('Last position data:', response);
     return response.data; // devuelve { device_id, last_location: { latitude, longitude, created_at } }
   } catch (error) {
     console.error('Error fetching last position:', error);
@@ -23,7 +24,7 @@ export async function getLastPosition(deviceId) {
 
 export const getAllUsers = async () => {
   try {
-    const response = await client.get('/users');
+    const response = await client.get('/user/all');
     return response.data; // devuelve el JSON con todos los usuarios
   } catch (error) {
     console.error('Error al obtener usuarios:', error);

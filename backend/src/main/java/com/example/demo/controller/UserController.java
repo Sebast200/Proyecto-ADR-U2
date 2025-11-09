@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users") // Base URL de los endpoints de usuarios
+@RequestMapping("/api/user/all") // Base URL de los endpoints de usuarios
 public class UserController {
 
     private final UserService userService;
