@@ -43,7 +43,14 @@ public class AuthService {
             userRepository.save(user);
 
             System.out.println("✅ Usuario registrado en base local (JPA)");
-            return new AuthResponse("Usuario registrado correctamente", user.getEmail(), user.getRole());
+            return new AuthResponse(
+                "Usuario registrado correctamente",
+                user.getId(),
+                user.getEmail(), 
+                user.getRole(),
+                user.getFirstName(),
+                user.getLastName()
+            );
         } catch (Exception ex) {
             System.out.println("⚠️ Fallo base local, intentando registrar en Supabase...");
             return registerFallback(req);
@@ -63,9 +70,15 @@ public class AuthService {
             if (!encoder.matches(req.password(), user.getPasswordHash()))
                 throw new RuntimeException("Contraseña incorrecta");
 
-            return new AuthResponse("Login exitoso", user.getEmail(), user.getRole());
+            return new AuthResponse(
+                "Login exitoso",
+                user.getId(),
+                user.getEmail(), 
+                user.getRole(),
+                user.getFirstName(),
+                user.getLastName()
+            );
         } catch (Exception ex) {
-            System.out.println("⚠️ Fallo base local, intentando login en Supabase...");
             return loginFallback(req);
         }
     }
@@ -88,8 +101,11 @@ public class AuthService {
             System.out.println("✅ Registro realizado en Supabase (fallback)");
             return new AuthResponse(
                 "Usuario registrado correctamente (Supabase)",
+                null, // ID no disponible en el fallback
                 req.email(),
-                Role.valueOf(req.role().toUpperCase())
+                Role.valueOf(req.role().toUpperCase()),
+                req.firstName(),
+                req.lastName()
             );
 
         } catch (Exception e) {
@@ -111,8 +127,14 @@ public class AuthService {
             if (!encoder.matches(req.password(), hash))
                 throw new RuntimeException("Contraseña incorrecta (Supabase)");
 
-            return new AuthResponse("Login exitoso (Supabase)", rs.getString("email"),
-                    Role.valueOf(rs.getString("role")));
+            return new AuthResponse(
+                "Login exitoso (Supabase)",
+                rs.getLong("id"),
+                rs.getString("email"),
+                Role.valueOf(rs.getString("role")),
+                rs.getString("first_name"),
+                rs.getString("last_name")
+            );
         } catch (Exception e) {
             throw new RuntimeException("No se pudo autenticar en ninguna base", e);
         }

@@ -32,18 +32,22 @@ const Layout = ({ user, onLogout, children }) => {
           >
             Mapa en Tiempo Real
           </button>
-          <button 
-            className={`menu-item ${isActive('/history') ? 'active' : ''}`} 
-            onClick={() => navigate('/history')}
-          >
-            Historial
-          </button>
-          <button 
-            className={`menu-item ${isActive('/reports') ? 'active' : ''}`} 
-            onClick={() => navigate('/reports')}
-          >
-            Reportes
-          </button>
+          {user.role !== 'driver' && (
+            <>
+              <button 
+                className={`menu-item ${isActive('/history') ? 'active' : ''}`} 
+                onClick={() => navigate('/history')}
+              >
+                Historial
+              </button>
+              <button 
+                className={`menu-item ${isActive('/reports') ? 'active' : ''}`} 
+                onClick={() => navigate('/reports')}
+              >
+                Reportes
+              </button>
+            </>
+          )}
           {user.role === 'admin' && (
             <button 
               className={`menu-item ${isActive('/users') ? 'active' : ''}`} 

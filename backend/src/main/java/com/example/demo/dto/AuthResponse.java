@@ -4,6 +4,9 @@ import com.example.demo.enums.Role;
 
 public record AuthResponse(
         String message,
+        Long userId,
         String email,
-        Role role
+        Role role,
+        String firstName,
+        String lastName
 ) {}

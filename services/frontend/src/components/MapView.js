@@ -34,37 +34,50 @@ const MapView = ({ user, onLogout }) => {
   const navigate = useNavigate();
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [targetPosition, setTargetPosition] = useState(null);
+  const [vehicles, setVehicles] = useState([]);
+  const [loading, setLoading] = useState(true);
   const mapRef = useRef(null);
 
-  const vehicles = [
-    { 
-      id: 1, 
-      plate: 'ABC-123', 
-      driver: 'Juan Pérez', 
-      position: [-33.4489, -70.6693],
-      speed: 45,
-      status: 'En movimiento',
-      route: [[-33.4489, -70.6693], [-33.4500, -70.6700], [-33.4520, -70.6710]]
-    },
-    { 
-      id: 2, 
-      plate: 'DEF-456', 
-      driver: 'María García', 
-      position: [-33.4372, -70.6506],
-      speed: 0,
-      status: 'Detenido',
-      route: [[-33.4372, -70.6506]]
-    },
-    { 
-      id: 3, 
-      plate: 'GHI-789', 
-      driver: 'Pedro López', 
-      position: [-33.4569, -70.6483],
-      speed: 60,
-      status: 'En movimiento',
-      route: [[-33.4569, -70.6483], [-33.4580, -70.6490], [-33.4600, -70.6500]]
-    }
-  ];
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const baseUrl = isLocal ? 'http://localhost:3001' : '';
+        
+        const url = user.role === 'driver'
+          ? `${baseUrl}/api/vehicles/with-drivers/user/${user.id}`
+          : `${baseUrl}/api/vehicles/with-drivers`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        // Transformar datos de la API al formato esperado para el mapa
+        const transformedVehicles = data
+          .filter(v => v.userId != null) // Solo vehículos con conductor asignado
+          .map(v => ({
+            id: v.id,
+            plate: v.plate,
+            driver: v.driverFirstName && v.driverLastName 
+              ? `${v.driverFirstName} ${v.driverLastName}` 
+              : v.driverEmail || 'Sin conductor',
+            driverId: v.userId,
+            position: [-33.4489, -70.6693], // Posición por defecto (Santiago, Chile)
+            speed: 0, // TODO: obtener velocidad real
+            status: 'Sin ubicación', // TODO: obtener status real
+            route: [[-33.4489, -70.6693]] // TODO: obtener ruta real
+          }));
+        
+        setVehicles(transformedVehicles);
+      } catch (error) {
+        console.error('Error al cargar vehículos:', error);
+        setVehicles([]); // Establecer array vacío en caso de error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVehicles();
+  }, [user.id, user.role]);
 
   const pointsOfInterest = [
     { id: 1, name: 'Base Central', position: [-33.4372, -70.6506], type: 'base' },
@@ -82,7 +95,12 @@ const MapView = ({ user, onLogout }) => {
         </div>
       </nav>
 
-      <div className="map-container">
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 60px)' }}>
+          <h2>Cargando mapa...</h2>
+        </div>
+      ) : (
+        <div className="map-container">
         <aside className="map-sidebar">
           <button className="menu-item" onClick={() => navigate('/dashboard')}>
             Dashboard
@@ -90,12 +108,16 @@ const MapView = ({ user, onLogout }) => {
           <button className="menu-item active">
             Mapa en Tiempo Real
           </button>
-          <button className="menu-item" onClick={() => navigate('/history')}>
-            Historial
-          </button>
-          <button className="menu-item" onClick={() => navigate('/reports')}>
-            Reportes
-          </button>
+          {user.role !== 'driver' && (
+            <>
+              <button className="menu-item" onClick={() => navigate('/history')}>
+                Historial
+              </button>
+              <button className="menu-item" onClick={() => navigate('/reports')}>
+                Reportes
+              </button>
+            </>
+          )}
           {user.role === 'admin' && (
             <button className="menu-item" onClick={() => navigate('/users')}>
               Gestión de Usuarios
@@ -103,25 +125,31 @@ const MapView = ({ user, onLogout }) => {
           )}
 
           <div className="vehicle-list">
-            <h3>Vehículos Activos</h3>
-            {vehicles.map(vehicle => (
-              <div 
-                key={vehicle.id} 
-                className={`vehicle-item ${selectedVehicle?.id === vehicle.id ? 'selected' : ''}`}
-                onClick={() => {
-                  setSelectedVehicle(vehicle);
-                  setTargetPosition(vehicle.position);
-                }}
-              >
-                <div className="vehicle-info">
-                  <strong>{vehicle.plate}</strong>
-                  <small>{vehicle.driver}</small>
+            <h3>{user.role === 'driver' ? 'Mi Vehículo' : 'Vehículos Activos'}</h3>
+            {vehicles.length === 0 ? (
+              <p style={{ padding: '10px', color: '#888' }}>
+                {user.role === 'driver' ? 'No tienes vehículo asignado' : 'No hay vehículos activos'}
+              </p>
+            ) : (
+              vehicles.map(vehicle => (
+                <div 
+                  key={vehicle.id} 
+                  className={`vehicle-item ${selectedVehicle?.id === vehicle.id ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSelectedVehicle(vehicle);
+                    setTargetPosition(vehicle.position);
+                  }}
+                >
+                  <div className="vehicle-info">
+                    <strong>{vehicle.plate}</strong>
+                    <small>{user.role === 'driver' ? 'Tu vehículo' : vehicle.driver}</small>
+                  </div>
+                  <div className={`vehicle-status ${vehicle.status === 'En movimiento' ? 'active' : 'stopped'}`}>
+                    {vehicle.speed} km/h
+                  </div>
                 </div>
-                <div className={`vehicle-status ${vehicle.status === 'En movimiento' ? 'active' : 'stopped'}`}>
-                  {vehicle.speed} km/h
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           <div className="poi-list">
@@ -207,6 +235,7 @@ const MapView = ({ user, onLogout }) => {
           </MapContainer>
         </div>
       </div>
+      )}
     </div>
   );
 };
