@@ -2,16 +2,17 @@ const express = require('express')
 const cors = require('cors')
 const { Pool } = require('pg')
 const app = express()
-const port = 3000
+require('dotenv').config();
 
 // Configuración de conexión a Postgres (se leen variables de entorno)
 const pool = new Pool({
-  host: process.env.PGHOST || 'db',
-  user: process.env.PGUSER || 'postgres',
-  password: process.env.PGPASSWORD || 'example',
-  database: process.env.PGDATABASE || 'postgres',
-  port: process.env.PGPORT ? parseInt(process.env.PGPORT) : 5432,
+  host: process.env.PGHOST,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
+  port: process.env.PGPORT,
 })
+const port = process.env.PORT
 
 // Middleware para procesar JSON
 app.use(express.json())
