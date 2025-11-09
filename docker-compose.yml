@@ -10,12 +10,27 @@ services:
       - "8081:80"
     restart: unless-stopped
 
-  backend:
+  backend1:
     build:
       context: ./backendgpsapp
-    container_name: backendgpsapp
+    container_name: backendgpsapp1
     ports:
       - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: example
+      PGDATABASE: postgres
+      PGPORT: 5432
+    restart: unless-stopped
+
+  backend1_replica:
+    build:
+      context: ./backendgpsapp
+    container_name: backendgpsapp2
+    ports:
+      - "3005:3000"
     environment:
       NODE_ENV: production
       PGHOST: db
@@ -117,7 +132,8 @@ services:
     networks:
       - default
     depends_on:
-      - backend
+      - backend1
+      - backend1_replica
       - backend2
       - db
       - db_replica
