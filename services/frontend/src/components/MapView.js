@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import './MapView.css';
-import client, { getLastPosition, getAllUsers } from '../api/axiosClient';
+import client, { getLastPosition, getAllUsers, getRoute } from '../api/axiosClient';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -38,6 +38,7 @@ const MapView = ({ user, onLogout }) => {
   const [targetPosition, setTargetPosition] = useState(null);
   const mapRef = useRef(null);
   const [users, setUsers] = useState([]);
+  const [routesByUser, setRoutesByUser] = useState({});
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -49,9 +50,9 @@ const MapView = ({ user, onLogout }) => {
           const data = await getLastPosition(u.email);
           if (data && data.last_location) {
             const { latitude, longitude } = data.last_location;
-            return { ...u, position: [latitude, longitude] };
+            return { ...u, position: [latitude, longitude], route: null };
           }
-          return { ...u, position: null };
+          return { ...u, position: null, route: null };
         })
       );
       console.log('Usuarios con posiciones:', usersWithPos);
@@ -59,7 +60,7 @@ const MapView = ({ user, onLogout }) => {
     };
 
     fetchUsers();
-
+    //consultar cada 5 segundos
     const interval = setInterval(fetchUsers, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -130,16 +131,26 @@ const MapView = ({ user, onLogout }) => {
               Gestión de Usuarios
             </button>
           )}
-
+        
           <div className="vehicle-list">
             <h3>Usuarios Activos</h3>
               {users.map(user => (
                 <div 
                   key={user.id} 
                   className={`vehicle-item ${selectedVehicle?.id === user.id ? 'selected' : ''}`}
-                  onClick={() => {
+                  onClick={async() => {
                     setSelectedVehicle(user);
                     setTargetPosition(user.position);
+                    
+                    if (!routesByUser[user.email]) {
+                      const ruta = await getRoute(user.email);
+                      if (ruta && Array.isArray(ruta.route)) {
+                        setRoutesByUser(prev => ({
+                          ...prev,
+                          [user.email]: ruta.route
+                        }));
+                      }
+                    }
                   }}
                 >
                   <div className="vehicle-info">
@@ -179,6 +190,15 @@ const MapView = ({ user, onLogout }) => {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
             
+            {selectedVehicle && 
+             routesByUser[selectedVehicle.email] && 
+             routesByUser[selectedVehicle.email].length > 0 &&(
+              <Polyline
+                positions= {routesByUser[selectedVehicle.email]}
+                color="blue"
+              />
+            )}
+
             {users.map((user, i) => (
               user.position ? (
                 <Marker

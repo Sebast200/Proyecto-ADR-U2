@@ -22,6 +22,16 @@ export async function getLastPosition(deviceId) {
   }
 }
 
+export const getRoute = async (deviceId) => {
+  try {
+    const response = await client.get(`/location/${deviceId}/route`);
+    return response.data; // devuelve { device_id, route: [ { latitude, longitude}, ... ] }
+  } catch (error) {
+    console.error('Error fetching route:', error);
+    return null;
+  }
+};
+
 export const getAllUsers = async () => {
   try {
     const response = await client.get('/user/all');

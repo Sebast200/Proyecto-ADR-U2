@@ -63,6 +63,32 @@ async function handleLocation(req, res) {
 app.post('/location', handleLocation)
 app.post('/location/:id', handleLocation)
 
+app.get('/location/:id/route', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const query = `
+      SELECT json_agg(json_build_array(latitude, longitude)) AS route
+      FROM (
+        SELECT latitude, longitude
+        FROM locations
+        WHERE device_id = $1
+        ORDER BY recorded_at ASC
+      ) AS ordered_points;
+    `;
+    
+    const result = await pool.query(query, [id]);
+
+    res.json({
+      device_id: id,
+      route: result.rows[0].route || [] // en caso de que no haya datos
+    });
+  } catch (err) {
+    console.error('Error fetching route:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 app.get('/location/:id/latest', async (req, res) => {
   const { id } = req.params
 
