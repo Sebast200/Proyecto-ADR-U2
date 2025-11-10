@@ -5,11 +5,35 @@ services:
       context: ./services/frontend
       dockerfile: Dockerfile
     container_name: frontend1
-    ports:
-      - "8081:80"
+    expose:
+      - "80" 
     depends_on:
       - backend1
       - backend2
+    restart: unless-stopped
+
+  frontend2:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
+    container_name: frontend2
+    expose:
+      - "80"  # Solo visible dentro de la red Docker
+    depends_on:
+      - backend1
+      - backend2
+    restart: unless-stopped
+
+  nginx_lb:
+    image: nginx:trixie-perl
+    container_name: nginx_lb
+    ports:
+      - "8081:80"  # El usuario accederá por aquí
+    volumes:
+      - ./nginx/lb.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend1
+      - frontend2
     restart: unless-stopped
 
   backend1:
