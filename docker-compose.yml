@@ -6,9 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: frontend1
     expose:
-      - "80" 
-    ports:
-      - "${FRONTEND_PORT}:80"
+      - "80"
     depends_on:
       - backend1
       - backend2
@@ -38,6 +36,12 @@ services:
     depends_on:
       - backend1
       - backend2
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
     deploy:
       resources:
@@ -70,6 +74,8 @@ services:
     build:
       context: ./backendgpsapp
     container_name: backendgpsapp1
+    env_file:
+      - .env
     ports:
       - "${BACKEND1_PORT}:3000"
     environment:
@@ -101,6 +107,8 @@ services:
     container_name: backendgpsapp2
     ports:
       - "${BACKEND1_REPLICA_PORT}:3000"
+    env_file:
+      - .env
     environment:
       NODE_ENV: ${NODE_ENV}
       PGHOST: ${PGHOST}
