@@ -69,7 +69,57 @@ Las principales funcionalidades incluyen:**
 - Express: Se utiliza para la creacion del backendgps que se encarga de la api relacionada a el gps recibiendo y mandando localización de los usuarios.
 
 
+## 3. Alta Disponibilidad
 
+El sistema está diseñado bajo un esquema de alta disponibilidad (HA) para garantizar la continuidad operativa incluso ante fallas parciales de componentes.
+Se implementan mecanismos de replicación, balanceo de carga y monitoreo continuo, tanto en el nivel de aplicación como de base de datos.
+
+🔹 Balanceo de carga en el Frontend
+
+El servicio frontend1 se despliega bajo un servidor Nginx configurado como load balancer.
+Este distribuye el tráfico entrante entre los dos backends principales:
+
+backendgpsapp1 (instancia principal)
+
+backendgpsapp2 (réplica en modo activo-activo)
+
+De esta forma, las solicitudes se balancean automáticamente, permitiendo manejar mayor concurrencia y evitar la sobrecarga de un único contenedor.
+
+Ventajas:
+
+Tolerancia a fallos del backend principal.
+
+Escalabilidad horizontal inmediata.
+
+Reducción de la latencia percibida por el usuario.
+
+🔹 Replicación de base de datos (failover automático)
+
+El sistema implementa una base de datos principal (db) y una db para los datos lógicos de usuarios, vehiculos, etc (db_replica), la cual opera bajo un esquema master–replica.
+
+db_sync: sincroniza automáticamente los cambios hacia la base remota en Supabase, garantizando redundancia geográfica y respaldo en la nube.
+
+Además, se incluye el contenedor db_watcher, el cual monitorea el estado de db_replica y la reinicia automáticamente en caso de caída, asegurando que el sistema vuelva a su estado operativo en menos de 30 segundos.
+
+Ventajas:
+
+Tolerancia a fallos de hardware o software.
+
+Persistencia de los datos críticos.
+
+Redundancia local y remota.
+
+🔹 Monitoreo en tiempo real
+
+La alta disponibilidad se apoya en un sistema de observabilidad basado en Prometheus y Grafana:
+
+node_exporter → métricas del sistema.
+
+docker_stats_exporter → métricas por contenedor Docker.
+
+prometheus → recopilación y almacenamiento de métricas.
+
+grafana → visualización con dashboards personalizables.
 
 ## 4. Componente IA 
 La integración de la IA en el proyecto para la licitación fue pensada como una parte crucial para la interacción entre los usuarios administrativos de la aplicación y los datos generados por los vehículos monitoreados. 
@@ -146,3 +196,51 @@ curl -X POST http://localhost:8081/api/auth/register \
     "role": "FLOTA"
   }'
 ```
+## 6. Backup y Monitoreo
+
+El sistema incluye un mecanismo automático de respaldos diarios de la base de datos local (db_replica) y herramientas para su restauración y supervisión.
+
+🔹 Respaldos automáticos (cron job)
+
+El servicio db_backup se ejecuta con una imagen de PostgreSQL y un cron job diario a las 02:00 AM, configurado para:
+
+Generar un backup completo de la base db_replica en formato .sql.
+
+Almacenar el archivo en la carpeta /scripts/backup/db_backups/.
+
+Retener los últimos 7 días de respaldos.
+
+Ruta en host:
+
+./scripts/backup/db_backups/
+
+
+Script principal:
+scripts/backup/backup-db.sh
+
+Ejecución manual (si se desea forzar un backup):
+
+docker exec -it db_backup sh /backup/backup-db.sh
+
+🔹 Restauración de datos
+
+En caso de contingencia, se puede restaurar un respaldo con el script:
+
+docker exec -it db_backup sh /backup/restore-db.sh /backup/db_backups/<archivo>.sql
+
+
+Esto recarga el estado de la base desde el archivo seleccionado, permitiendo recuperación completa ante pérdida o corrupción de datos.
+
+🔹 Monitoreo del sistema
+
+Prometheus recoge métricas de todos los servicios.
+
+Grafana presenta paneles con CPU, memoria, uso de red y estado de contenedores.
+
+Las métricas se actualizan cada 5 segundos, con dashboards que permiten filtrar por contenedor específico.
+
+Acceso local al monitoreo:
+
+Grafana → http://localhost:3002
+
+Prometheus → http://localhost:9090
