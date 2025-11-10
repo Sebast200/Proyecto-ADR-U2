@@ -1,6 +1,6 @@
 # Sistema de Monitoreo y Gestión de Flota GPS
 
-## Descripción General
+## 1. Descripción General
 
 ### Licitación elegida: Servicio monitoreo GPS y gestión de flota
 
@@ -21,7 +21,7 @@ Las principales funcionalidades incluyen:**
 
 ---
 
-## Arquitectura del Sistema
+## 2. Arquitectura del Sistema
 
 ### Diagrama de Arquitectura
 
@@ -66,13 +66,83 @@ Las principales funcionalidades incluyen:**
 - Grafana 11.2.2: Visualización de métricas con dashboards personalizables. Integración nativa con Prometheus.
 - Node Exporter 1.8.2: Exporta métricas del sistema operativo (CPU, RAM, disco, red).
 - Docker Stat Exporter: Exporta estadísticas de contenedores Docker para monitoreo.
+- Express: Se utiliza para la creacion del backendgps que se encarga de la api relacionada a el gps recibiendo y mandando localización de los usuarios.
 
 
-Para correr de manera remota la aplicación del gps, primero se debe entrar a los directorios backendgps para instalar las dependencias
-npm install
-luego levantar y construir el docker compose
-docker compose up --build
-para correr en cloudflare luego de todo lo anterior y tener instalado los servicios de cloudflare desde 
-https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/
-Por ultimo crear el tunnel en el localhost con el puerto 8081
-cloudflared tunnel --url http://localhost:8081
+
+
+## 4. Componente IA 
+La integración de la IA en el proyecto para la licitación fue pensada como una parte crucial para la interacción entre los usuarios administrativos de la aplicación y los datos generados por los vehículos monitoreados. 
+
+Su función consiste en recolectar datos como ubicación, velocidad, estado y otras características del vehículo y su recorrido, con el fin de generar reportes relacionados con los hábitos de conducción, excesos de velocidad, paradas habituales, entre otros indicadores útiles para la gestión de flota. 
+## 5. Como Usarlo 
+### Requisitos 
+Para un correcto funcionamiento del sistema se requiere un dispositivo con acceso a Internet, capaz de enviar datos GPS en tiempo real. En su defecto, se pueden utilizar herramientas de túnelización para permitir la conexión remota (recomendado), ya que para obtener la ubicación de manera remota se necesitan certificados SSL para el protocolo HTTPS, los cuales no se consideraron durante el desarrollo. 
+
+Por otro lado, dado que el proyecto utiliza una base de datos en la nube (en este caso Supabase), se necesita una cuenta que contenga la base de datos donde se almacenará una de las réplicas de los datos de los usuarios. El dispositivo o servidor donde se ejecute el proyecto debe contar con: 
+
+- Conexión estable a Internet (banda ancha simétrica recomendada). 
+- Al menos 8 GB de RAM. 
+- 256 GB de almacenamiento SSD para una mejor transferencia de datos. 
+- Sistema operativo Ubuntu Server 22.04 (o similar).
+- Docker y Docker Compose instalados y configurados correctamente. 
+
+ ## Instalación y ejecución
+
+``` bash
+git clone https://github.com/Sebast200/Proyecto-ADR-U2.git
+cd Proyecto-ADR-U2
+```
+Con esto se descargará y abrirá el repositorio del proyecto. Dentro del mismo se encuentran los directorios de los distintos contenedores, los cuales son orquestados y construidos mediante Docker Compose. 
+Antes de ejecutar el proyecto, asegúrate de tener Docker instalado con una versión reciente:
+
+```bash
+docker -v
+```
+Ahora si procederemos con el buildeo y ejecucion de los contenedores docker
+```bash
+docker compose up --build #agregar opcion -d si no quiere bloquer la terminal
+```
+Este comando instalará todas las dependencias, sincronizará las bases de datos y levantará todos los servicios. 
+
+Una vez finalizado el proceso, si no se muestran errores, el sistema estará operativo. 
+## URLs de acceso y comandos útiles 
+Dado que el sistema está compuesto por varios microservicios, se definieron distintos endpoints para cumplir con las diversas funciones del sistema.
+### Monitoreo (graphana)
+La interfaz de monitoreo se encuentra disponible en el puerto 3002
+```bash
+http://localhost:3002
+```
+### Bases de datos (adminer)
+Para acceder a la interfaz de administración de las bases de datos locales, se puede ingresar mediante el servicio Adminer disponible en el puerto 8080:
+
+```bash
+http://localhost:8080
+```
+### Pagina principal (Frontend)
+El puerto principal del sistema es el 8081, donde Nginx actúa como load balancer para distribuir las solicitudes de los usuarios hacia los distintos servicios. Este es el puerto que debe exponerse para las conexiones remotas.
+```bash
+http://localhost:8081
+```
+### Otros puertos importantes #### Backend para usuarios
+```bash
+http://localhost:3001
+```
+#### Backend para gps
+```bash
+http://localhost:3000
+```
+## Usuarios y contraseñas de prueba
+Al ingresar al frontend, el sistema solicitará credenciales de usuario. Para registrar un usuario nuevo, se puede realizar una petición directa al backend con el siguiente formato (los roles disponibles son "FLOTA", "DAF" y "CHOFER"):
+```bash
+curl -X POST http://localhost:8081/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "rut": "11111111-1",
+    "email": "encargado@flota.cl",
+    "password": "123456",
+    "firstName": "Mario",
+    "lastName": "Fuentes",
+    "role": "FLOTA"
+  }'
+```
