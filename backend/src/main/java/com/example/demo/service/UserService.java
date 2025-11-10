@@ -30,6 +30,12 @@ public class UserService {
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
+
+    public String getMailById(Long id) {
+        return userRepository.findById(id)
+                .map(User::getEmail)
+                .orElse(null);
+    }
     
     public List<UserWithVehicleResponse> getAllUsersWithVehicles() {
         System.out.println("🔍 Consultando usuarios con sus vehículos asignados...");
