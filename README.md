@@ -182,6 +182,15 @@ http://localhost:3001
 ```bash
 http://localhost:3000
 ```
+### Uso de aplicacion remotamente
+Nuestro uso de la aplicacion de manera remota fue gracias a cloudflare tunnel, donde se tuvo que instalar los paquetes desde:
+
+https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/
+
+Una vez instalado se puede tunelizar un puerto en específico para tener acceso remoto sin necesidad de tener una ip pública:
+```bash
+cloudflared tunnel --url http://localhost:8081
+```
 ## Usuarios y contraseñas de prueba
 Al ingresar al frontend, el sistema solicitará credenciales de usuario. Para registrar un usuario nuevo, se puede realizar una petición directa al backend con el siguiente formato (los roles disponibles son "FLOTA", "DAF" y "CHOFER"):
 ```bash
