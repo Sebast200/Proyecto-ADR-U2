@@ -32,7 +32,7 @@ services:
       dockerfile: Dockerfile
     container_name: frontend2
     expose:
-      - "80"  # Solo visible dentro de la red Docker
+      - "80"
     depends_on:
       - backend1
       - backend2
@@ -56,7 +56,7 @@ services:
     image: nginx:trixie-perl
     container_name: nginx_lb
     ports:
-      - "8081:80"  # El usuario accederá por aquí
+      - "8081:80"  # ÚNICO puerto expuesto para el frontend
     volumes:
       - ./nginx/lb.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
@@ -76,8 +76,8 @@ services:
     container_name: backendgpsapp1
     env_file:
       - .env
-    ports:
-      - "${BACKEND1_PORT}:3000"
+    expose:
+      - "3000"  # Cambiado de ports a expose
     environment:
       NODE_ENV: ${NODE_ENV}
       PGHOST: ${PGHOST}
@@ -105,8 +105,8 @@ services:
     build:
       context: ./backendgpsapp
     container_name: backendgpsapp2
-    ports:
-      - "${BACKEND1_REPLICA_PORT}:3000"
+    expose:
+      - "3000"  # Cambiado de ports a expose
     env_file:
       - .env
     environment:
@@ -136,8 +136,8 @@ services:
     build:
       context: ./backend
     container_name: backend2
-    ports:
-      - "${BACKEND2_PORT}:3001"
+    expose:
+      - "3001"  # Cambiado de ports a expose
     environment:
       NODE_ENV: ${NODE_ENV}
       PGHOST: ${PGHOST}
@@ -232,7 +232,7 @@ services:
   db_sync:
     image: node:20-alpine
     container_name: db_sync
-    user: "1000:1000"  # Usuario 'node' no privilegiado
+    user: "1000:1000"
     working_dir: /app
     volumes:
       - ./scripts:/app
@@ -255,6 +255,7 @@ services:
         reservations:
           cpus: '0.25'
           memory: 128M
+
   db_backup:
     image: postgres:15.8-alpine3.19
     container_name: db_backup
@@ -299,13 +300,12 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
-
   adminer:
     image: adminer:4.8.1-standalone
     user: "82:82"
     restart: always
     ports:
-      - "${ADMINER_PORT}:8080"
+      - "${ADMINER_PORT}:8080"  # Expuesto para acceso externo
     deploy:
       resources:
         limits:
@@ -314,13 +314,14 @@ services:
         reservations:
           cpus: '0.25'
           memory: 128M
+
   prometheus:
     image: prom/prometheus:v2.55.0
     container_name: prometheus
     user: "65534:65534"
     restart: unless-stopped
-    ports:
-      - "${PROMETHEUS_PORT}:9090"
+    expose:
+      - "9090"  # Cambiado de ports a expose
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:
@@ -346,17 +347,16 @@ services:
     container_name: node_exporter
     user: "65534:65534"
     restart: unless-stopped
-    ports:
-      - "${NODE_EXPORTER_PORT}:9100"
+    expose:
+      - "9100"  # Cambiado de ports a expose
     networks:
       - default
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9100/metrics"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-
     deploy:
       resources:
         limits:
@@ -370,8 +370,8 @@ services:
     image: wywywywy/docker_stats_exporter:latest
     container_name: docker_stats_exporter
     restart: unless-stopped
-    ports:
-      - "${DOCKER_STATS_EXPORTER_PORT}:9487"
+    expose:
+      - "9487"  # Cambiado de ports a expose
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -391,7 +391,7 @@ services:
     user: "472:0"
     restart: unless-stopped
     ports:
-      - "${GRAFANA_PORT}:3000"
+      - "${GRAFANA_PORT}:3000"  # Expuesto para acceso externo
     environment:
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
@@ -408,7 +408,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-
     deploy:
       resources:
         limits:
