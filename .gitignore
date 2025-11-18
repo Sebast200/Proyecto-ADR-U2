@@ -3,3 +3,4 @@ backendgpsapp/node_modules/
 services/frontend/build/
 scripts/node_modules/
 .env
+nginx/certs/key.pem
