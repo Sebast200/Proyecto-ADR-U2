@@ -42,30 +42,47 @@ const MapView = ({ user, onLogout }) => {
   const [users, setUsers] = useState([]);
   const [routesByUser, setRoutesByUser] = useState({});
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const allUsers = await getAllUsers();
+useEffect(() => {
+  const fetchUsers = async () => {
+    const allUsers = await getAllUsers();
 
-      // Para cada usuario, obtener su última posición
-      const usersWithPos = await Promise.all(
-        allUsers.map(async (u) => {
-          const data = await getLastPosition(u.email);
-          if (data && data.last_location) {
-            const { latitude, longitude } = data.last_location;
-            return { ...u, position: [latitude, longitude], route: null };
+    const usersWithPos = await Promise.all(
+      allUsers.map(async (u) => {
+        const data = await getLastPosition(u.email);
+        if (data && data.last_location) {
+          const { latitude, longitude } = data.last_location;
+          const newPos = [latitude, longitude];
+
+          // Solo actualiza rutas del usuario actualmente seleccionado
+          if (selectedVehicle?.email === u.email) {
+            setRoutesByUser(prev => {
+              const prevRoute = prev[u.email] || [];
+              const lastPoint = prevRoute[prevRoute.length - 1];
+              // Evita duplicar puntos si la posición no cambió
+              if (!lastPoint || lastPoint[0] !== latitude || lastPoint[1] !== longitude) {
+                return {
+                  ...prev,
+                  [u.email]: [...prevRoute, newPos]
+                };
+              }
+              return prev;
+            });
           }
-          return { ...u, position: null, route: null };
-        })
-      );
-      console.log('Usuarios con posiciones:', usersWithPos);
-      setUsers(usersWithPos);
-    };
 
-    fetchUsers();
-    //consultar cada 5 segundos
-    const interval = setInterval(fetchUsers, 5000);
-    return () => clearInterval(interval);
-  }, []);
+          return { ...u, position: newPos, route: null };
+        }
+        return { ...u, position: null, route: null };
+      })
+    );
+
+    setUsers(usersWithPos);
+  };
+
+  fetchUsers();
+  const interval = setInterval(fetchUsers, 5000);
+  return () => clearInterval(interval);
+}, [selectedVehicle]);
+
 
 
   useEffect(() => {

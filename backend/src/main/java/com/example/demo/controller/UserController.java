@@ -26,6 +26,22 @@ public class UserController {
         this.userService = userService;
     }
 
+
+    @GetMapping("/all")
+    public List<User> getAllUsers() {
+        return userService.getAllUsers();
+    }
+
+    @GetMapping("/{id}/email")
+    public ResponseEntity<String> getMailById(@PathVariable Long id) {
+        String email = userService.getMailById(id);
+        if (email != null) {
+            return ResponseEntity.ok(email);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @GetMapping("/with-vehicles")
     public ResponseEntity<List<UserWithVehicleResponse>> getAllUsersWithVehicles() {
         try {

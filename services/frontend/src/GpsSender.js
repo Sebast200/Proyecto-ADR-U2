@@ -11,7 +11,7 @@ function GpsSender({ user }) {
     if (!user) return undefined; // don't start if no user
 
   // prefer explicit id, otherwise fall back to email, username, name, or a default
-  const deviceId = user?.id;
+  const deviceId = user.email;
 
     // guard to avoid double-setup in StrictMode/dev
     if (isRunningRef.current) return undefined;
