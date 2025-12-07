@@ -253,3 +253,71 @@ Acceso local al monitoreo:
 Grafana → http://localhost:3002
 
 Prometheus → http://localhost:9090
+
+---
+# UNIDAD 3
+
+## 7. Seguridad y HTTPS
+
+El sistema implementa una capa completa de seguridad mediante HTTPS con certificados TLS, garantizando que todas las comunicaciones entre clientes y servidores estén cifradas y protegidas.
+**URL principal**: https://localhost:443
+
+### Implementación HTTPS
+
+#### Certificados TLS
+- **Ubicación**: `nginx/certs/`
+- **Tipo**: Certificados autofirmados con OpenSSL
+- **Algoritmo**: RSA 4096 bits
+- **Hash**: SHA-256
+- **Validez**: 365 días (renovable)
+- **Protocolos soportados**: TLSv1.2 y TLSv1.3
+
+#### Redirección Automática HTTP → HTTPS
+Todo el tráfico HTTP (puerto 80) se redirige automáticamente a HTTPS (puerto 443), garantizando que ninguna comunicación se realice sin cifrado.
+
+```nginx
+# Configuración en nginx/lb.conf
+server {
+    listen 80;
+    server_name localhost;
+    return 301 https://$host$request_uri;
+}
+```
+
+### Headers de Seguridad HTTP
+
+El servidor Nginx está configurado con headers de seguridad siguiendo las mejores prácticas de OWASP:
+
+| Header | Valor | Propósito |
+|--------|-------|-----------|
+| **Strict-Transport-Security** | `max-age=31536000; includeSubDomains; preload` | Fuerza HTTPS durante 1 año. Previene downgrade attacks |
+| **X-Frame-Options** | `SAMEORIGIN` | Protege contra clickjacking |
+| **X-Content-Type-Options** | `nosniff` | Previene MIME-sniffing attacks |
+| **X-XSS-Protection** | `1; mode=block` | Activa filtro anti-XSS del navegador |
+| **Referrer-Policy** | `strict-origin-when-cross-origin` | Controla información de referencia enviada |
+| **Content-Security-Policy** | Configuración personalizada | Protege contra XSS e inyección de código |
+
+![Headers HTTPS Configurados](docs/screenshots/https-headers.png)
+*Captura mostrando los headers de seguridad*
+
+### 🔧 Generación de Certificados
+
+El proyecto incluye un script automatizado para generar certificados SSL autofirmados:
+
+**Ubicación**: `scripts/security/generate-certs.sh`
+
+#### Uso básico (ejecutar con bash):
+```bash
+cd scripts/security
+./generate-certs.sh
+```
+
+El script realiza automáticamente:
+- ✅ Backup de certificados existentes
+- ✅ Generación de clave privada RSA 4096 bits
+- ✅ Creación de certificado autofirmado con SHA-256
+- ✅ Configuración de permisos seguros (600 para key.pem, 644 para cert.pem)
+- ✅ Validación y muestra de detalles del certificado
+
+
+
