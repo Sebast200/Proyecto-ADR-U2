@@ -1,4 +1,57 @@
+version: '3.9'
+
 services:
+  # --- INFRAESTRUCTURA DE LOGGING (Loki y Promtail) ---
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: loki
+    user: "10001"
+    restart: unless-stopped
+    volumes:
+      # Asume que ./logging/loki-config.yml existe
+      - ./logging/loki-config.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/config.yml
+    networks:
+      - default
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.50'
+          memory: 256M
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: promtail
+    user: "10001"
+    restart: unless-stopped
+    volumes:
+      # Acceso a logs de Docker
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro 
+      # Descubrimiento de contenedores
+      - /var/run/docker.sock:/var/run/docker.sock:ro 
+      # Asume que ./logging/promtail-config.yml existe
+      - ./logging/promtail-config.yml:/etc/promtail/config.yml:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - default
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.10'
+          memory: 64M
+          
+  # --- SERVICIOS DE APLICACIÓN (Con Log Driver Configurado) ---
 
   frontend1:
     build:
@@ -18,6 +71,8 @@ services:
       retries: 3
       start_period: 40s
     restart: unless-stopped
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
     deploy:
       resources:
         limits:
@@ -45,6 +100,8 @@ services:
       retries: 3
       start_period: 40s
     restart: unless-stopped
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
     deploy:
       resources:
         limits:
@@ -67,6 +124,7 @@ services:
       - frontend1
       - frontend2
       - grafana
+      - loki # 👈 AÑADIDO
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "https://localhost:443/health" ]
@@ -74,6 +132,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
 
   backend1:
     build:
@@ -98,6 +158,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
     deploy:
       resources:
         limits:
@@ -132,6 +194,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
     deploy:
       resources:
         limits:
@@ -151,19 +215,32 @@ services:
     ports:
       - "${BACKEND2_PORT}:3001"
     environment:
+      # --- Variables de Entorno para la Aplicación y el MultiDataSourceConfig ---
       NODE_ENV: ${NODE_ENV}
       PGHOST: ${PGHOST}
       PGUSER: ${PGUSER}
       PGPASSWORD: ${PGPASSWORD}
       PGDATABASE: ${PGDATABASE}
       PGPORT: ${PGPORT}
+      SERVER_PORT: ${SERVER_PORT}
+      
+      # 🚨 SOBRESCRIBIR CONFIGURACIÓN DE JPA (para asegurar la conexión al inicio)
+      # Esto fuerza a Spring a usar las credenciales definidas en el .env
+      SPRING_DATASOURCE_LOCAL_URL: jdbc:postgresql://db_replica:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_LOCAL_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_LOCAL_PASSWORD: ${POSTGRES_PASSWORD}
+      
+      # Configuraciones para el Fallback (ResilientConnectionManager)
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
-      SERVER_PORT: ${SERVER_PORT}
+      
     depends_on:
       - db
+      - loki # Dependencia para el sistema de logs
     restart: unless-stopped
+    logging: # 👈 Configuración para el Log Driver de Docker
+      driver: "json-file"
     healthcheck:
       test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/actuator/health" ]
       interval: 30s
@@ -180,6 +257,8 @@ services:
           memory: 512M
     networks:
       - dbgps
+          
+  # --- DB Y HERRAMIENTAS ---
 
   db:
     image: postgres:15.8-alpine3.19
@@ -218,6 +297,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
     deploy:
       resources:
         limits:
@@ -255,6 +336,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
     deploy:
       resources:
         limits:
@@ -286,6 +369,8 @@ services:
       SUPABASE_DB: ${SUPABASE_DB}
     command: >
       sh -c "npm install && node syncer.js"
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
     deploy:
       resources:
         limits:
@@ -294,6 +379,7 @@ services:
         reservations:
           cpus: '0.25'
           memory: 128M
+          
   db_backup:
     image: postgres:15.8-alpine3.19
     container_name: db_backup
@@ -308,6 +394,8 @@ services:
     command: >
       "echo '0 2 * * * /backup/backup-db.sh' | crontab - &&
        crond -f -L /dev/stdout"
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
     deploy:
       resources:
         limits:
@@ -338,6 +426,8 @@ services:
       "
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
 
   adminer:
     image: adminer:4.8.1-standalone
@@ -345,6 +435,8 @@ services:
     restart: always
     ports:
       - "${ADMINER_PORT}:8080"
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
     deploy:
       resources:
         limits:
@@ -356,6 +448,9 @@ services:
     networks:
       - dbgps
 
+          
+  # --- MONITOREO ---
+          
   prometheus:
     image: prom/prometheus:v2.55.0
     container_name: prometheus
@@ -441,10 +536,13 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=${GF_USERS_ALLOW_SIGN_UP}
     volumes:
       - grafana_data:/var/lib/grafana
+      # 👈 PROVISIONAMIENTO AÑADIDO para configurar Loki como fuente de datos
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning 
     networks:
       - default
     depends_on:
       - prometheus
+      - loki # 👈 AÑADIDO
     healthcheck:
       test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health" ]
       interval: 30s
@@ -482,6 +580,8 @@ services:
       "
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    logging: # 👈 LOGGING AÑADIDO
+      driver: "json-file"
     deploy:
       resources:
         limits:
@@ -507,3 +607,5 @@ secrets:
     file: ./secrets/db_password.txt
   db_name:
     file: ./secrets/db_name.txt
+    
+  loki_data: # 👈 VOLUMEN AÑADIDO

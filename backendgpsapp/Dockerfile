@@ -1,6 +1,10 @@
 # Etapa 1: Instalación de dependencias
 FROM node:18-alpine AS dependencies
 
+# Crear usuario no privilegiado
+RUN addgroup -g 1001 -S appuser && \
+    adduser -u 1001 -S appuser -G appuser
+
 WORKDIR /usr/src/app
 
 # Copiar solo los archivos de dependencias primero (mejor cache)
