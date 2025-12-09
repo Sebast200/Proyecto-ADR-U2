@@ -351,7 +351,7 @@ Se definen **3 zonas de protección** con diferentes límites según el tipo de 
 - **nodelay**: No agrega latencia adicional cuando hay ráfagas
 - **limit_req_status 429**: Devuelve código HTTP 429 (Too Many Requests) cuando se excede el límite
 
-#### ⚙️ Cómo funciona el rate limiting:
+#### Cómo funciona el rate limiting:
 - **Zona general y API**: El límite se reinicia cada segundo (10 req/s o 5 req/s)
 - **Zona login**: El límite se reinicia cada minuto (3 req/m)
   - Primera petición del minuto: Permitida
