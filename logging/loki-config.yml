@@ -1,0 +1,36 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9095
+
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      # Mantenemos boltdb-shipper para no perder datos si ya grabó algo
+      store: boltdb-shipper 
+      object_store: filesystem
+      schema: v11 # Mantenemos la versión V11, pero la desactivamos en limits_config
+      index:
+        prefix: index_
+        period: 24h
+
+# 👈 AÑADIR ESTA SECCIÓN PARA DESACTIVAR LA VALIDACIÓN ESTRICTA
+limits_config:
+  # Esto le dice a Loki que está bien usar el esquema V11 y boltdb-shipper 
+  # aunque estemos en una versión reciente de Loki (v3.x) que empuja a usar v13/tsdb.
+  allow_structured_metadata: false 
+  # Límite de retención de logs (opcional, por defecto es infinito si no se define)
+  retention_period: 30d

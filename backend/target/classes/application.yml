@@ -1,9 +1,9 @@
 spring:
   datasource:
     local:
-      url: jdbc:postgresql://db_replica:5432/postgres
-      username: postgres
-      password: example
+      url: jdbc:postgresql://db_replica:5432/${POSTGRES_DB}
+      username: ${POSTGRES_USER} 
+      password: ${POSTGRES_PASSWORD}
       driver-class-name: org.postgresql.Driver
     supabase:
       url: jdbc:postgresql://aws-1-us-east-2.pooler.supabase.com:6543/postgres?sslmode=require
