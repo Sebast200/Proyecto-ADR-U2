@@ -2,15 +2,25 @@ require('dotenv').config();
 const express = require('express')
 const cors = require('cors')
 const { Pool } = require('pg')
+const fs = require('fs');
 const app = express()
 const port = process.env.BACKEND1_PORT// ahora lee el puerto desde .env
 
-// Configuración de conexión a Postgres (usa las variables del .env)
+// Función para leer secretos de Docker
+const getSecret = (secretName, envVar) => {
+  try {
+    return fs.readFileSync(`/run/secrets/${secretName}`, 'utf8').trim();
+  } catch (err) {
+    return process.env[envVar];
+  }
+};
+
+// Configuración de conexión a Postgres (usa secretos o variables del .env)
 const pool = new Pool({
   host: process.env.PGHOST,
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE,
+  user: getSecret('db_user', 'PGUSER'),
+  password: getSecret('db_password', 'PGPASSWORD'),
+  database: getSecret('db_name', 'PGDATABASE'),
   port: process.env.PGPORT ? parseInt(process.env.PGPORT) : 5432,
 })
 
@@ -78,7 +88,7 @@ app.get('/location/:id/route', async (req, res) => {
         ORDER BY recorded_at ASC
       ) AS ordered_points;
     `;
-    
+
     const result = await pool.query(query, [id]);
 
     res.json({

@@ -108,6 +108,10 @@ services:
           memory: 256M
     networks:
       - dbgps
+    secrets:
+      - db_user
+      - db_password
+      - db_name
 
   backend1_replica:
     build:
@@ -142,6 +146,10 @@ services:
           memory: 256M
     networks:
       - dbgps
+    secrets:
+      - db_user
+      - db_password
+      - db_name
 
   backend2:
     build:
