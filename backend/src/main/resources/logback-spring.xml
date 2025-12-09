@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>
+                <customFields>{"service_name":"backend2"}</customFields>
+            </customFields>
+            <fieldNames>
+                <timestamp>@timestamp</timestamp>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="JSON_CONSOLE"/>
+    </root>
+
+    <logger name="com.example.demo" level="DEBUG"/>
+    
+</configuration>

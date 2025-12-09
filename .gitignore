@@ -6,5 +6,5 @@ scripts/node_modules/
 nginx/certs/key.pem
 nginx/certs/cert.pem
 nginx/certs/backup_*/
+
 secrets/
-.env
