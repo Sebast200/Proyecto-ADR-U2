@@ -168,8 +168,6 @@ services:
         reservations:
           cpus: '0.5'
           memory: 256M
-    networks:
-      - dbgps
 
   backend1_replica:
     build:
@@ -204,8 +202,6 @@ services:
         reservations:
           cpus: '0.5'
           memory: 256M
-    networks:
-      - dbgps
 
   backend2:
     build:
@@ -255,8 +251,6 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-    networks:
-      - dbgps
           
   # --- DB Y HERRAMIENTAS ---
 
@@ -266,31 +260,12 @@ services:
     restart: always
     shm_size: 128mb
     environment:
-      POSTGRES_USER_FILE: /run/secrets/db_user
-      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
-      POSTGRES_DB_FILE: /run/secrets/db_name
-    secrets:
-      - db_user
-      - db_password
-      - db_name
-    command:
-      - "postgres"
-      - "-c"
-      - "log_connections=on"
-      - "-c"
-      - "log_disconnections=on"
-      - "-c"
-      - "log_statement=all"
-      - "-c"
-      - "log_min_error_statement=info"
-
-      - "-c"
-      - "password_encryption=scram-sha-256"
-      - "-c"
-      - "ssl=off"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - db-data:/var/lib/postgresql/data
-      - ./backendgpsapp:/docker-entrypoint-initdb.d:ro
+      - ./backendgpsapp/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
@@ -307,8 +282,6 @@ services:
         reservations:
           cpus: '1.0'
           memory: 512M
-    networks:
-      - dbgps
 
   db_replica:
     image: postgres:15.8-alpine3.19
@@ -346,10 +319,6 @@ services:
         reservations:
           cpus: '1.0'
           memory: 512M
-    secrets:
-      - db_user
-      - db_password
-      - db_name
 
   db_sync:
     image: node:20-alpine
@@ -445,9 +414,6 @@ services:
         reservations:
           cpus: '0.25'
           memory: 128M
-    networks:
-      - dbgps
-
           
   # --- MONITOREO ---
           
@@ -590,22 +556,9 @@ services:
         reservations:
           cpus: '0.05'
           memory: 32M
-networks:
-  dbgps:
-    driver: bridge
 
 volumes:
   db-data:
   db-replica-data:
   grafana_data:
-
-
-secrets:
-  db_user:
-    file: ./secrets/db_user.txt
-  db_password:
-    file: ./secrets/db_password.txt
-  db_name:
-    file: ./secrets/db_name.txt
-    
   loki_data: # 👈 VOLUMEN AÑADIDO

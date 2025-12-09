@@ -4,9 +4,6 @@ services/frontend/build/
 scripts/node_modules/
 .env
 nginx/certs/key.pem
-nginx/certs/cert.pem
 nginx/certs/backup_*/
 scripts/node_modules/
-.env
-secrets/
 .env
