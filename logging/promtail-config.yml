@@ -1,0 +1,43 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+- job_name: docker-logs
+  docker_sd_configs:
+    - host: unix:///var/run/docker.sock
+      refresh_interval: 5s
+  relabel_configs:
+    - source_labels: ['__meta_docker_container_name']
+      regex: '/(.*)'
+      target_label: 'container_name'
+    - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+      target_label: 'job'
+    - target_label: 'environment'
+      replacement: 'production'
+  pipeline_stages:
+    # 1. Intenta parsear como JSON (específicamente para backend2)
+    - json:
+        expressions:
+          level: level
+          security_event_raw: message # Captura el mensaje para procesarlo
+        source: message
+        keep_json: true
+        drop_field: true # Evita duplicar el mensaje completo
+
+    # 2. Crea etiquetas de seguridad solo si se detecta un log JSON
+    - regex:
+        expression: "EVENT_SECURITY:(?P<security_event>[^ ]+)|EVENT_DB:(?P<db_event>[^ ]+)|EVENT_CONFIG:(?P<config_event>[^ ]+)"
+        source: security_event_raw
+
+    # 3. Transfiere los eventos de seguridad y configuración como etiquetas
+    - labels:
+        security_event:
+        db_event:
+        config_event:
