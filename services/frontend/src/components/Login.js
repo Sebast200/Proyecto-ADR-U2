@@ -13,11 +13,8 @@ const Login = ({ onLogin }) => {
     setError('');
 
     try {
-      // Detectar si estamos en desarrollo local o producción
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const apiUrl = isLocal 
-        ? 'http://localhost:3001/api/auth/login'
-        : '/api/auth/login'; // En producción, usar ruta relativa (requiere proxy)
+      // Usar ruta relativa para que pase por nginx (rate limiting)
+      const apiUrl = '/api/auth/login';
 
       // Llamada al backend para autenticación
       const response = await fetch(apiUrl, {

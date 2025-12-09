@@ -158,43 +158,54 @@ Este comando instalará todas las dependencias, sincronizará las bases de datos
 Una vez finalizado el proceso, si no se muestran errores, el sistema estará operativo. 
 ## URLs de acceso y comandos útiles 
 Dado que el sistema está compuesto por varios microservicios, se definieron distintos endpoints para cumplir con las diversas funciones del sistema.
-### Monitoreo (graphana)
-La interfaz de monitoreo se encuentra disponible en el puerto 3002
+### Monitoreo (Grafana)
+La interfaz de monitoreo se encuentra disponible a través de Nginx con HTTPS:
 ```bash
-http://localhost:3002
+https://localhost/grafana/
 ```
-### Bases de datos (adminer)
-Para acceder a la interfaz de administración de las bases de datos locales, se puede ingresar mediante el servicio Adminer disponible en el puerto 8080:
+
+### Bases de datos (Adminer)
+Para acceder a la interfaz de administración de las bases de datos locales directamente (sin pasar por nginx):
 
 ```bash
 http://localhost:8080
 ```
-### Pagina principal (Frontend)
-El puerto principal del sistema es el 8081, donde Nginx actúa como load balancer para distribuir las solicitudes de los usuarios hacia los distintos servicios. Este es el puerto que debe exponerse para las conexiones remotas.
+### Página principal (Frontend)
+El puerto principal del sistema es el **443 (HTTPS)**, donde Nginx actúa como load balancer, proporciona cifrado SSL/TLS y aplica protecciones de seguridad (WAF, rate limiting, security headers). Este es el puerto que debe exponerse para las conexiones remotas.
+
 ```bash
-http://localhost:8081
+https://localhost
 ```
-### Otros puertos importantes #### Backend para usuarios
+
+**Puerto HTTP (80):** Redirige automáticamente a HTTPS (puerto 443)
+
+**⚠️ Advertencia de certificado:** El navegador mostrará una advertencia porque el certificado es autofirmado. Esto es normal en desarrollo. Haz clic en "Avanzado" → "Continuar a localhost" para acceder.
+### Otros puertos importantes
+
+#### Backend para usuarios (API REST)
 ```bash
-http://localhost:3001
+https://localhost/api/
 ```
-#### Backend para gps
-```bash
-http://localhost:3000
-```
+*Acceso directo sin nginx (solo desarrollo):* `http://localhost:3001`
+
+#### Backend para GPS
+*Acceso directo sin nginx (solo desarrollo):* `http://localhost:3000`
+
+**⚠️ Importante:** Para aplicaciones en producción, **siempre usar las URLs con HTTPS** que pasan por Nginx. Los puertos directos (3000, 3001) no tienen rate limiting ni protección WAF.
 ### Uso de aplicacion remotamente
 Nuestro uso de la aplicacion de manera remota fue gracias a cloudflare tunnel, donde se tuvo que instalar los paquetes desde:
 
 https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/
 
-Una vez instalado se puede tunelizar un puerto en específico para tener acceso remoto sin necesidad de tener una ip pública:
+Una vez instalado se puede tunelizar un puerto en específico para tener acceso remoto sin necesidad de tener una ip pública, ademas debemos especificar no-tls-verify, ya que nuestro certificado SSL es autofirmado (no confiable):
 ```bash
-cloudflared tunnel --url http://localhost:8081
+cloudflared tunnel --url https://localhost:443 --no-tls-verify
 ```
 ## Usuarios y contraseñas de prueba
 Al ingresar al frontend, el sistema solicitará credenciales de usuario. Para registrar un usuario nuevo, se puede realizar una petición directa al backend con el siguiente formato (los roles disponibles son "FLOTA", "DAF" y "CHOFER"):
 ```bash
-curl -X POST http://localhost:8081/api/auth/register \
+curl -X POST https://localhost/api/auth/register \
+  -k \
   -H "Content-Type: application/json" \
   -d '{
     "rut": "11111111-1",
@@ -205,6 +216,7 @@ curl -X POST http://localhost:8081/api/auth/register \
     "role": "FLOTA"
   }'
 ```
+
 ## 6. Backup y Monitoreo
 
 El sistema incluye un mecanismo automático de respaldos diarios de la base de datos local (db_replica) y herramientas para su restauración y supervisión.
@@ -250,12 +262,11 @@ Las métricas se actualizan cada 5 segundos, con dashboards que permiten filtrar
 
 Acceso local al monitoreo:
 
-Grafana → http://localhost:3002
+**Grafana** →  https://localhost/grafana/
 
-Prometheus → http://localhost:9090
+**Prometheus →** http://localhost:9090
 
----
-# UNIDAD 3
+
 
 ## 7. Seguridad y HTTPS
 
@@ -313,11 +324,157 @@ cd scripts/security
 ```
 
 El script realiza automáticamente:
-- ✅ Backup de certificados existentes
-- ✅ Generación de clave privada RSA 4096 bits
-- ✅ Creación de certificado autofirmado con SHA-256
-- ✅ Configuración de permisos seguros (600 para key.pem, 644 para cert.pem)
-- ✅ Validación y muestra de detalles del certificado
+- Backup de certificados existentes
+- Generación de clave privada RSA 4096 bits
+- Creación de certificado autofirmado con SHA-256
+- Configuración de permisos seguros (600 para key.pem, 644 para cert.pem)
+- Validación y muestra de detalles del certificado
+
+---
+
+## 8. WAF y Rate Limiting
+
+Protección contra ataques web mediante **Rate Limiting** y bloqueo de user-agents maliciosos directamente en Nginx.
+
+### Configuración de Rate Limiting
+
+Se definen **3 zonas de protección** con diferentes límites según el tipo de tráfico:
+
+| Zona | Límite | Aplicación | Propósito |
+|------|--------|------------|--------|
+| **general** | 10 req/s | Frontend, Grafana (páginas generales) | Protección general contra saturación de la red |
+| **api** | 5 req/s | Endpoints `/api/*` (excepto login) | Protección de API REST |
+| **login** | 3 req/m | `/api/auth/login`, `/api/auth/register`, `/grafana/login`, `/grafana/api/login`, `/grafana/api/auth` | Prevención de ataques de fuerza bruta en autenticación |
+
+#### Parámetros de configuración:
+- **burst**: Permite ráfagas temporales (20 para general, 10 para API, 2 para login)
+- **nodelay**: No agrega latencia adicional cuando hay ráfagas
+- **limit_req_status 429**: Devuelve código HTTP 429 (Too Many Requests) cuando se excede el límite
+
+#### ⚙️ Cómo funciona el rate limiting:
+- **Zona general y API**: El límite se reinicia cada segundo (10 req/s o 5 req/s)
+- **Zona login**: El límite se reinicia cada minuto (3 req/m)
+  - Primera petición del minuto: Permitida
+  - Segunda petición: Permitida
+  - Tercera petición: Permitida
+  - Cuarta petición en adelante: Bloqueada (429) hasta que pase 1 minuto
+  - Con `burst=2`, permite hasta 5 peticiones rápidas (3 normales + 2 de burst), luego bloquea todo hasta el próximo minuto
+
+### Bloqueo contra usuarios maliciosos (WAF)
+
+Se implementa un **Web Application Firewall (WAF)** básico mediante detección de user-agents maliciosos. El sistema bloquea automáticamente herramientas y scripts conocidos por actividades maliciosas:
+
+#### User-Agents Bloqueados:
+
+**Categoría: Bots y Crawlers**
+- `bot` - Bots genéricos no identificados
+- `crawler` - Crawlers no autorizados
+- `spider` - Web spiders de scraping
+- `scrap` - Detecta: scraper, scrapy, scraping
+- `scanner` / `scan` - Scanners genéricos
+- `nikto` - Nikto Web Scanner
+- `nuclei` - Nuclei vulnerability scanner
+- `acunetix` - Acunetix Web Scanner (comercial)
+- `nessus` - Nessus vulnerability scanner
+- `openvas` - OpenVAS security scanner
+- `sqlmap` - Herramienta de SQL injection
+- `nmap` - Port scanner de redes
+- `masscan` - Port scanner masivo
+- `metasploit` - Framework de explotación
+- `burp` - Burp Suite proxy/scanner
+
+#### User-Agents Permitidos:
+- `curl` - Permitido para testing y desarrollo
+- `wget` - Permitido para healthchecks
+
+#### Respuesta ante detección:
+- **Código HTTP**: `403 Forbidden`
+- **Mensaje JSON**: `{"error": "Forbidden - Malicious user-agent detected"}`
+- **Log**: Se registra en `/var/log/nginx/access.log`
+
+### Logs
+
+Todos los bloqueos y peticiones sospechosas se registran en:
+- **Access Log**: `/var/log/nginx/access.log`
+- **Error Log**: `/var/log/nginx/error.log`
+
+Para ver peticiones bloqueadas en tiempo real:
+```bash
+# Ver rate limiting en acción
+docker logs nginx_lb -f | grep "limiting"
+
+# Ver user-agents bloqueados
+docker logs nginx_lb | grep "403"
+```
+
+### Comandos de Prueba Manual
+
+Para probar manualmente el rate limiting por zona (ejecutar desde Git Bash):
+
+#### Test de las 3 zonas juntas:
+```bash
+echo "=== Comparación de Zonas de Rate Limiting ===" && echo "" && \
+echo "1. Zona GENERAL (10 req/s):" && \
+(for i in {1..50}; do curl -k -s -o /dev/null -w "%{http_code}\n" --max-time 1 https://localhost:443/ & done; wait) 2>/dev/null | sort | uniq -c && echo "" && \
+echo "2. Zona API (5 req/s):" && \
+(for i in {1..50}; do curl -k -s -o /dev/null -w "%{http_code}\n" --max-time 1 https://localhost:443/api/health & done; wait) 2>/dev/null | sort | uniq -c && echo "" && \
+echo "3. Zona LOGIN - Frontend (3 req/min):" && \
+for i in {1..10}; do curl -k -s -o /dev/null -w "%{http_code}\n" https://localhost:443/api/auth/login 2>/dev/null; done | sort | uniq -c && echo "" && \
+echo "4. Zona LOGIN - Grafana (3 req/min):" && \
+for i in {1..10}; do curl -k -s -o /dev/null -w "%{http_code}\n" https://localhost:443/grafana/login 2>/dev/null; done | sort | uniq -c
+```
+
+**Resultados esperados:**
+
+La primera vez que ejecutes verás 3 peticiones exitosas y el resto bloqueadas. Si vuelves a ejecutar inmediatamente, **todas serán bloqueadas (429)** porque el límite es por minuto:
+
+```
+=== Comparación de Zonas de Rate Limiting ===
+
+1. Zona GENERAL (10 req/s):
+     38 200
+     12 429
+
+2. Zona API (5 req/s):
+     21 404
+     29 429
+
+3. Zona LOGIN - Frontend (3 req/min):
+      3 405  (o 200/404 dependiendo del endpoint)
+      7 429
+
+4. Zona LOGIN - Grafana (3 req/min):
+      3 200
+      7 429
+```
+
+### Evidencia de Funcionamiento
+
+![Headers HTTPS Configurados](docs/screenshots/pruebas.png)
+*Revision de peticiones aceptadas 200 vs bloqueadas 429*
+
+![Headers HTTPS Configurados](docs/screenshots/niktorun.png)
+*Prueba utilizando nikto para la web*
+
+![Headers HTTPS Configurados](docs/screenshots/nginx_logs_nikto.png)
+*Logs bloqueando a nikto*
+
+### Configuración Técnica
+
+```nginx
+# Definición de zonas
+limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=api:10m rate=5r/s;
+limit_req_zone $binary_remote_addr zone=login:10m rate=3r/m;
+
+# Aplicación por location
+location / {
+    limit_req zone=general burst=20 nodelay;
+    limit_req_status 429;
+    proxy_pass http://frontend_cluster;
+}
+```
+
 
 
 
